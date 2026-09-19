@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+  <title>paint-a-pint</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root {
+      --cream: #fbf7ee;
+      --pink: #e58a8a;
+      --green: #5fa88c;
+      --ink: #4a3b34;
+      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: #1c1915; overflow: hidden; font-family: var(--mono); color: var(--ink); }
+    #app { position: fixed; inset: 0; }
+    #app canvas { display: block; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+
+    .note {
+      position: relative; background: var(--cream); border-radius: 6px;
+      box-shadow: 0 6px 18px rgba(0,0,0,.35);
+    }
+    .note::before { /* washi tape */
+      content: ""; position: absolute; top: -9px; left: 50%; width: 64px; height: 18px;
+      transform: translateX(-50%) rotate(-2deg); background: rgba(229,138,138,.75);
+      clip-path: polygon(0 10%, 4% 0, 8% 12%, 12% 0, 92% 0, 96% 12%, 100% 0, 100% 90%, 96% 100%, 92% 88%, 88% 100%, 8% 100%, 4% 88%, 0 100%);
+    }
+
+    #title { position: fixed; top: 22px; left: 22px; padding: 12px 18px 10px; font-weight: 700; letter-spacing: .14em; font-size: 13px; transition: opacity .4s; }
+    #title small { display: block; font-weight: 400; letter-spacing: .04em; opacity: .6; margin-top: 3px; font-size: 11px; }
+    #hint {
+      position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); padding: 9px 16px;
+      background: rgba(251,247,238,.92); border-radius: 999px; font-size: 12px; letter-spacing: .06em;
+      box-shadow: 0 4px 14px rgba(0,0,0,.3); transition: opacity .4s; pointer-events: none;
+    }
+    body.painting #title, body.painting #hint, body.travelling #title, body.travelling #hint { opacity: 0; }
+
+    #paint { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity .35s; }
+    #paint.on { opacity: 1; }
+    #paint.on > * { pointer-events: auto; }
+    #paper {
+      position: absolute; background: #f6efdd; touch-action: none; cursor: none;
+      box-shadow: inset 0 0 22px rgba(90,60,30,.18);
+    }
+    #paper canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+    #grain { mix-blend-mode: multiply; pointer-events: none; opacity: .9; }
+
+    #card {
+      position: absolute; right: 26px; top: 50%; transform: translateY(-50%); width: 212px; padding: 22px 18px 16px;
+      border: 5px dashed var(--pink); background: var(--cream);
+    }
+    #card h2 { margin: 0 0 12px; color: var(--green); font-size: 20px; letter-spacing: .08em; }
+    #swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+    .sw { width: 100%; aspect-ratio: 1; border-radius: 50%; border: 2px solid rgba(0,0,0,.18); cursor: pointer; padding: 0; transition: transform .12s; }
+    .sw:hover { transform: scale(1.08); }
+    .sw.sel { outline: 3px solid var(--green); outline-offset: 2px; }
+    .row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 12px; }
+    .row label { min-width: 34px; }
+    input[type=range] { flex: 1; accent-color: var(--green); }
+    .btn {
+      font: inherit; font-size: 12px; letter-spacing: .04em; color: var(--ink); background: #fff; cursor: pointer;
+      border: 2px solid var(--ink); border-radius: 6px; padding: 7px 10px; width: 100%; margin-top: 8px;
+    }
+    .btn:hover { background: #f1ead8; }
+    .btn.sel { background: var(--ink); color: var(--cream); }
+    .btn.primary { background: var(--green); border-color: var(--green); color: #fff; font-weight: 700; }
+    .btn.primary:hover { filter: brightness(1.06); }
+    .tools { display: flex; gap: 8px; }
+    .tools .btn { margin-top: 0; }
+    #esc { font-size: 10.5px; opacity: .55; margin: 10px 0 0; text-align: center; }
+
+    #cursor {
+      position: fixed; left: 0; top: 0; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%;
+      border: 1.5px solid rgba(40,30,25,.85); box-shadow: 0 0 0 1px rgba(255,255,255,.7); pointer-events: none; opacity: 0; z-index: 9;
+    }
+
+    @media (max-aspect-ratio: 5/4) {
+      #card { right: 50%; transform: translateX(50%); top: auto; bottom: 14px; width: min(92vw, 420px); padding-top: 18px; }
+      #swatches { grid-template-columns: repeat(6, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="title" class="note">PAINT-A-PINT<small>a tiny painting room</small></div>
+  <div id="hint">✦ click the easel to paint</div>
+
+  <div id="paint">
+    <div id="paper">
+      <canvas id="paint-canvas"></canvas>
+      <canvas id="grain"></canvas>
+    </div>
+    <aside id="card" class="note">
+      <h2>PAINT</h2>
+      <div id="swatches"></div>
+      <div class="row"><label for="size">size</label><input id="size" type="range" min="6" max="70" value="26" /></div>
+      <div class="tools">
+        <button class="btn" id="brush">brush</button>
+        <button class="btn" id="eraser">eraser</button>
+      </div>
+      <button class="btn" id="clear">clear</button>
+      <button class="btn primary" id="back">hang it up &amp; go back</button>
+      <p id="esc">esc works too</p>
+    </aside>
+  </div>
+  <div id="cursor"></div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
