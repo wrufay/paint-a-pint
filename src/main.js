@@ -61,6 +61,14 @@ world.canvasMat.normalScale.set(1.6, 1.6); // 1 is subtle, 3 makes the weave blo
 world.canvasMat.roughness = 0.8;
 const uploadPaint = () => { if (painter.syncMaps()) { paintTex.needsUpdate = true; paintNormal.needsUpdate = true; } };
 
+// ── the easel lies flat on the desk while you paint (bird's-eye view), and stands up again in the room ──
+const DESK_TOP = 1.5; // desk surface height in room.js
+const easelUp = { pos: world.easel.position.clone(), rotX: world.easel.rotation.x };
+const easelFlat = { pos: new THREE.Vector3(0, DESK_TOP + 0.034, -3.3), rotX: -Math.PI / 2 }; // canvas face up, top edge towards the back wall; clear of the mouse and the palette
+const easelParts = world.easel.children.filter((c) => !world.easelHit.includes(c)); // legs and prop: hidden while it lies flat
+function poseEasel(p, lift = 0) { world.easel.position.copy(p.pos); world.easel.position.y += lift; world.easel.rotation.x = p.rotX; world.easel.updateMatrixWorld(true); }
+function withEasel(p, fn) { const keep = { pos: world.easel.position.clone(), rotX: world.easel.rotation.x }; poseEasel(p); const r = fn(); poseEasel(keep); return r; }
+
 // ── state machine: room → travelling → paint → travelling → room ─────────────
 let mode = 'room';
 const mouse = new THREE.Vector2(0, 0), mouseSm = new THREE.Vector2(0, 0);
@@ -123,9 +131,9 @@ function layoutPaper() {
   });
 }
 
-function travel(to, done) {
+function travel(to, done, easel) {
   tween = {
-    t0: performance.now(), dur: 1150, done, to,
+    t0: performance.now(), dur: 1150, done, to, easel,
     from: { pos: camera.position.clone(), quat: camera.quaternion.clone(), fov: camera.fov },
   };
   document.body.classList.add('travelling');
@@ -135,12 +143,12 @@ function enterPaint() {
   if (mode !== 'room') return;
   mode = 'travelling';
   hover(false);
-  travel(paintPose(), () => {
+  travel(withEasel(easelFlat, paintPose), () => {
     mode = 'paint';
     document.body.classList.remove('travelling'); document.body.classList.add('painting');
     layoutPaper();
     paintEl.classList.add('on');
-  });
+  }, { from: easelUp, to: easelFlat, legs: false });
 }
 
 // hang = true finishes the painting (it goes on the wall and the easel is cleared); false just steps back and leaves it drying on the easel
@@ -161,7 +169,7 @@ function leavePaint(hang = true) {
       painter.clear();
       uploadPaint();
     }
-  });
+  }, { from: easelFlat, to: easelUp, legs: true });
 }
 
 initAcrylicUI(painter, { onBack: () => leavePaint(true) });
@@ -202,6 +210,12 @@ function frame(now) {
     camera.quaternion.slerpQuaternions(tween.from.quat, tween.to.quat, k);
     camera.fov = tween.from.fov + (tween.to.fov - tween.from.fov) * k;
     camera.updateProjectionMatrix();
+    const e = tween.easel;
+    if (e) { // the easel lifts, turns and settles as the camera goes; its legs are only there while it stands
+      const t = k >= 1 ? 1 : k;
+      poseEasel({ pos: new THREE.Vector3().lerpVectors(e.from.pos, e.to.pos, t), rotX: e.from.rotX + (e.to.rotX - e.from.rotX) * t }, Math.sin(Math.PI * t) * 0.3);
+      for (const c of easelParts) c.visible = e.legs ? t > 0.6 : t < 0.4;
+    }
     if (k >= 1) { const d = tween.done; tween = null; d(); }
   } else if (mode === 'room') {
     // gentle limited parallax orbit around the diorama

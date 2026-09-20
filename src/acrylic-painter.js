@@ -147,7 +147,7 @@ export function initAcrylicUI(painter, { onBack }) {
   mk('save png', () => painter.savePng(), true);
   const wetHint = document.createElement('p');
   wetHint.textContent = 'blue = still workable · orange = getting tacky · no tint = dry';
-  wetHint.style.cssText = 'display:none;margin:8px 0 0;font-size:10.5px;opacity:.7;text-align:center;';
+  wetHint.style.cssText = 'display:none;margin:8px 0 0;font-size:11px;color:var(--ink-soft);text-align:center;';
   const back = document.getElementById('back');
   back.parentNode.insertBefore(extra, back); back.parentNode.insertBefore(wetHint, back);
 
