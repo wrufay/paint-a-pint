@@ -20,6 +20,10 @@ It's easy for an artist to lose their home when their heart and tools are far aw
 
 As a second year computer science student navigating early career, life undoubtly throws an endless streaem of toils that add friction to creation, but **relinquish and regression can't be the only way.**
 
+I aimed to solve this through making the act of painting digital, without having to worry about costs, material, and negative respiratory impacts that real acrylic painting can entail.
+
+
+
 ## Built with
 
 - Vite 8
@@ -80,14 +84,11 @@ Pigment mixing tables come from [Spectral.js](https://github.com/rvanwijnen/spec
 
 
 
-## More soon
+## What's next
 
 - **Two books** on the desk that users can click: one an _app tutorial_ and the other an _art tutorial_. I want to share my own (minimal) expertise to make creating art more accessible, less intimidating, and ultimately **playful**.
-- Opinions on an **AI guide?** 💭
+- An **AI guide?** 💭
 - **Different locations** to paint in, plus interface theme matching the local time of day.
-
-## Potential expansions
-
-Right now, _paint-a-pint_ is front-end only, and that's by design. It fulfills its purpose of being a **tool to build your skills**. In the future, _paint-a-pint_ could become a real personal gallery - or even a shared one among friends and community members, each writing their own playbooks on tips, techniques, and thinking.
+- Right now, _paint-a-pint_ is front-end only, and that's by design to fulfill the purpose of being a **skill-builder tool**. In the future, it could become a real personal gallery - or even a shared one among friends and community members, each writing their own playbooks on tips, techniques, and thinking.
 
 ### I hope you enjoyed [_paint-a-pint_](https://paint-a-pint.vercel.app/) ⊹° Until next time...
