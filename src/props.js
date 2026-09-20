@@ -23,6 +23,12 @@ export const TABLE = {
   view: { x: 0.5, z: -3.2, width: 2.5, height: 1.5 },   // what the overhead camera has to fit; centred on the canvas
 };
 
+// The desk now stands against the left wall, so the whole layout above (canvas, palette, tubes, jar, glass, overhead view) is moved
+// left by the same amount as the desk, the window and the sun patch. The numbers above are the layout as generated; this moves it.
+export const DESK_SHIFT = -1.3;
+TABLE.canvas.x += DESK_SHIFT; TABLE.palette.x += DESK_SHIFT; TABLE.jar.x += DESK_SHIFT; TABLE.glass.x += DESK_SHIFT; TABLE.view.x += DESK_SHIFT;
+for (const t of TABLE.tubes) t[0] += DESK_SHIFT;
+
 // The names as printed on the tubes and swatch cards (paints/), in the order they appear there.
 const NAMES = {
   'naphthol-red': ['Naphthol red medium', 'Naftolrood middel', 'Rouge naphtol moyen', 'Naphtholrot mittel', 'Rojo naftol medio', 'Rosso medio naftolo'],

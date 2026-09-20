@@ -214,7 +214,7 @@ export function buildRoom(scene) {
 
   // ── walls: back wall has the window cut out; left wall is plain ─────────────
   const T = 0.3, H = 5, wr = 0.02;
-  const wx0 = 0.85, wx1 = 3.75, wy0 = 1.95, wy1 = 4.15, xc = (wx0 + wx1) / 2, yc = (wy0 + wy1) / 2;
+  const wx0 = -0.7, wx1 = 1.9, wy0 = 1.95, wy1 = 4.15, xc = (wx0 + wx1) / 2, yc = (wy0 + wy1) / 2;
   box(room, 8.3, wy0, T, M.wall, 0, wy0 / 2, -4.0, { r: wr });
   box(room, 8.3, H - wy1, T, M.wall, 0, wy1 + (H - wy1) / 2, -4.0, { r: wr });
   box(room, wx0 + 4.15, wy1 - wy0, T, M.wall, (-4.15 + wx0) / 2, yc, -4.0, { r: wr });
@@ -236,7 +236,7 @@ export function buildRoom(scene) {
   // sized to fill the window from the camera's angle and no wider, or it pokes out past the open side of the diorama
   const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(3.55, 3.0), new THREE.MeshBasicMaterial({ map: backdropTexture(), toneMapped: false }));
   backdrop.material.color.setScalar(1.15);
-  backdrop.position.set(1.775, 2.7, -4.9);
+  backdrop.position.set(0.075, 2.7, -4.9);
   room.add(backdrop);
 
   // fake contact-shadow strips where walls meet the floor
@@ -245,15 +245,16 @@ export function buildRoom(scene) {
   const aoBack = new THREE.Mesh(new THREE.PlaneGeometry(7.7, 0.9), aoMat); aoBack.position.set(0.075, 0.45, -3.84); room.add(aoBack);
   const aoLeft = new THREE.Mesh(new THREE.PlaneGeometry(7.7, 0.9), aoMat); aoLeft.rotation.y = Math.PI / 2; aoLeft.position.set(-3.84, 0.45, 0.075); room.add(aoLeft);
 
-  // ── desk: dark espresso, along the whole back wall ──────────────────────────
-  const TOP = 1.5;
-  box(room, 7.7, 0.12, 1.5, M.desk, 0, TOP - 0.06, -3.15, { r: 0.03 });
-  box(room, 0.1, TOP - 0.12, 1.4, M.deskSide, -3.75, (TOP - 0.12) / 2, -3.15, { r: 0.02 });
-  box(room, 0.1, TOP - 0.12, 1.4, M.deskSide, 3.75, (TOP - 0.12) / 2, -3.15, { r: 0.02 });
-  box(room, 7.4, 0.5, 0.05, M.deskSide, 0, 1.1, -3.82, { r: 0.02 });
+  // ── desk: dark espresso, along the left and middle of the back wall (the right end is the bed's, under the window) ──
+  // 4.35 long, about 55% of the old 7.7: it still reaches x = 1.85, past the paint layout the overhead view uses (see TABLE in props.js).
+  const TOP = 1.5, DESK_L = -3.8, DESK_R = 0.55, DESK_C = (DESK_L + DESK_R) / 2;
+  box(room, DESK_R - DESK_L, 0.12, 1.5, M.desk, DESK_C, TOP - 0.06, -3.15, { r: 0.03 });
+  box(room, 0.1, TOP - 0.12, 1.4, M.deskSide, DESK_L + 0.05, (TOP - 0.12) / 2, -3.15, { r: 0.02 });
+  box(room, 0.1, TOP - 0.12, 1.4, M.deskSide, DESK_R - 0.05, (TOP - 0.12) / 2, -3.15, { r: 0.02 });
+  box(room, DESK_R - DESK_L - 0.2, 0.5, 0.05, M.deskSide, DESK_C, 1.1, -3.82, { r: 0.02 });
 
   // chair: neutral placeholder (not visible in the photos)
-  const chair = new THREE.Group(); chair.position.set(-1.0, 0, -1.7); chair.rotation.y = 0.3; room.add(chair);
+  const chair = new THREE.Group(); chair.position.set(-2.35, 0, -1.3); chair.rotation.y = 0.3; chair.scale.setScalar(1.3); room.add(chair);
   box(chair, 0.95, 0.24, 0.9, M.chair, 0, 1.0, 0, { r: 0.11 });
   box(chair, 0.9, 0.85, 0.2, M.chair, 0, 1.6, 0.45, { r: 0.1, rx: -0.08 });
   cyl(chair, 0.06, 0.06, 0.62, M.chairDark, 0, 0.66, 0);
@@ -265,25 +266,21 @@ export function buildRoom(scene) {
 
   // ── desk things (from the photos) ───────────────────────────────────────────
   // laptop on a riser, screen glowing
-  box(room, 1.0, 0.05, 0.6, M.ink, -2.75, TOP + 0.12, -3.2, { r: 0.02, rx: -0.14 });
-  box(room, 1.25, 0.04, 0.85, M.lapGrey, -2.75, TOP + 0.24, -3.2, { r: 0.02, rx: -0.14 });
-  const lapScreen = box(room, 1.25, 0.78, 0.03, M.lapGrey, -2.75, TOP + 0.66, -3.62, { r: 0.02, rx: -0.2 });
+  box(room, 1.0, 0.05, 0.6, M.ink, -3.15, TOP + 0.12, -3.2, { r: 0.02, rx: -0.14 });
+  box(room, 1.25, 0.04, 0.85, M.lapGrey, -3.15, TOP + 0.24, -3.2, { r: 0.02, rx: -0.14 });
+  const lapScreen = box(room, 1.25, 0.78, 0.03, M.lapGrey, -3.15, TOP + 0.66, -3.62, { r: 0.02, rx: -0.2 });
   plane(lapScreen, 1.12, 0.66, new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xdde6f4, emissiveIntensity: 0.55, roughness: 0.6 }), 0, 0, 0.02);
   // pink-keycap keyboard with underglow, and the white vertical mouse
-  box(room, 1.2, 0.03, 0.44, new THREE.MeshBasicMaterial({ color: new THREE.Color(0.55, 0.6, 1.2), toneMapped: false }), -1.5, TOP + 0.02, -2.72, { cast: false, ry: 0.08 });
-  box(room, 1.15, 0.08, 0.4, M.white, -1.5, TOP + 0.07, -2.72, { r: 0.03, ry: 0.08 });
-  plane(room, 1.02, 0.34, new THREE.MeshStandardMaterial({ map: keyboardTex(), roughness: 0.55 }), -1.5, TOP + 0.113, -2.72).rotation.set(-Math.PI / 2, 0, -0.08);
-  box(room, 0.14, 0.2, 0.2, M.white, -0.8, TOP + 0.1, -2.66, { r: 0.06, rz: 0.22 });   // (beside the keyboard, clear of the table area the paints use)
-  // open notebook with a yellow sticky note, a pink Bible and a dark green book leaning on the wall
-  box(room, 1.05, 0.05, 0.55, M.cream, -3.05, TOP + 0.025, -2.55, { r: 0.015, ry: -0.12 });
-  box(room, 0.02, 0.055, 0.55, std(0xc9bfa8), -3.05, TOP + 0.03, -2.55, { r: 0.005, ry: -0.12 });
-  box(room, 0.24, 0.012, 0.24, std(0xf5e27a), -2.75, TOP + 0.062, -2.52, { r: 0.004, ry: 0.3, cast: false });
-  box(room, 0.5, 0.75, 0.22, std(0xe8a9b6), -0.95, TOP + 0.375, -3.66, { r: 0.03, rz: 0.03 });
-  box(room, 0.45, 0.7, 0.2, std(0x2f4a3a), -1.36, TOP + 0.35, -3.66, { r: 0.03, rz: -0.03 });
+  box(room, 1.2, 0.03, 0.44, new THREE.MeshBasicMaterial({ color: new THREE.Color(0.55, 0.6, 1.2), toneMapped: false }), -2.8, TOP + 0.02, -2.72, { cast: false, ry: 0.08 });
+  box(room, 1.15, 0.08, 0.4, M.white, -2.8, TOP + 0.07, -2.72, { r: 0.03, ry: 0.08 });
+  plane(room, 1.02, 0.34, new THREE.MeshStandardMaterial({ map: keyboardTex(), roughness: 0.55 }), -2.8, TOP + 0.113, -2.72).rotation.set(-Math.PI / 2, 0, -0.08);
+  box(room, 0.14, 0.2, 0.2, M.white, -2.1, TOP + 0.1, -2.66, { r: 0.06, rz: 0.22 });   // (beside the keyboard, clear of the table area the paints use)
+  // a pink Bible leaning on the wall. (The open notebook with its sticky note and the dark green book no longer fit on the shorter desk.)
+  box(room, 0.5, 0.75, 0.22, std(0xe8a9b6), -2.25, TOP + 0.375, -3.66, { r: 0.03, rz: 0.03 });
 
   // the paintable thing: a tabletop easel between the collage and the window
   const tilt = 0.14, easel = new THREE.Group();
-  easel.position.set(-0.05, 2.45, -3.3); easel.rotation.x = -tilt; room.add(easel);
+  easel.position.set(-1.35, 2.45, -3.3); easel.rotation.x = -tilt; room.add(easel);
   const CW = 1.3, CH = 0.95;
   const board = box(easel, CW + 0.05, CH + 0.05, 0.06, std(0xe9e0c8), 0, 0, 0, { r: 0.01 });
   const canvasMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 });
@@ -296,17 +293,17 @@ export function buildRoom(scene) {
   const easelHit = [board, canvasFace];
 
   // paint palette
-  const palette = cyl(room, 0.3, 0.3, 0.03, std(0xd9bc8c), 0.95, TOP + 0.015, -2.85, { seg: 32 });
+  const palette = cyl(room, 0.3, 0.3, 0.03, std(0xd9bc8c), -0.35, TOP + 0.015, -2.85, { seg: 32 });
   palette.scale.z = 0.72; palette.rotation.y = 0.5;
   const oldPalette = [palette];   // returned so the interactive mixing tray (src/tray3d.js) can take its place
   [0xd4552f, 0x3d5aa8, 0xd9a441, 0x5b8a4a, 0xf7f2e4].forEach((c, i) => {
     const a = 0.5 + i * 0.75;
-    oldPalette.push(sph(room, 0.045, std(c, { roughness: 0.5 }), 0.95 + Math.cos(a) * 0.19, TOP + 0.05, -2.85 - Math.sin(a) * 0.12, [1, 0.5, 1], { cast: false }));
+    oldPalette.push(sph(room, 0.045, std(c, { roughness: 0.5 }), -0.35 + Math.cos(a) * 0.19, TOP + 0.05, -2.85 - Math.sin(a) * 0.12, [1, 0.5, 1], { cast: false }));
   });
 
   // pen cup with pastel pens, a pink beaded flower and a yellow plush. They stand in their own group, moved left of the books so the
   // back-right of the desk is free for the water jars and brushes (see TABLE in props.js).
-  const pens = new THREE.Group(); pens.position.set(-3.4, 0, 0.25); room.add(pens);
+  const pens = new THREE.Group(); pens.position.set(-3.75, 0, 0.25); room.add(pens);
   cyl(pens, 0.17, 0.15, 0.4, std(0xf3ead8), 1.45, TOP + 0.2, -3.45);
   ['#f6a5b8', '#a8d8c4', '#f8d98a', '#a9c4f0', '#d6b8f0', '#f7b68f', '#9fd9d0', '#f2a0a0'].forEach((c, i) => {
     const p = cyl(pens, 0.014, 0.014, 0.62, std(0xf0f0f0), 1.45 + (i - 3.5) * 0.028, TOP + 0.6, -3.45 + ((i * 7) % 3 - 1) * 0.04, { seg: 6 });
@@ -316,22 +313,24 @@ export function buildRoom(scene) {
   });
   cyl(pens, 0.008, 0.008, 0.5, std(0x5b8a4a), 1.7, TOP + 0.75, -3.4, { seg: 5 });
   for (let i = 0; i < 6; i++) sph(pens, 0.045, std(0xf07a9a), 1.7 + Math.cos(i * 1.05) * 0.06, TOP + 1.0 + Math.sin(i * 1.05) * 0.06, -3.4, [1, 1, 1], { cast: false });
-  sph(pens, 0.2, std(0xf6d54a, { roughness: 0.95 }), 1.95, TOP + 0.2, -3.45);
-  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.07, 6), std(0xf0902a)); beak.position.set(2.02, TOP + 0.2, -3.27); beak.rotation.x = Math.PI / 2; pens.add(beak);
+  // (the yellow plush and its beak that sat beside the cup are on the bed now)
 
-  // mint crate with sticky notes and stationery
-  box(room, 0.95, 0.42, 0.6, M.mint, 2.55, TOP + 0.21, -3.4, { r: 0.04 });
-  box(room, 0.85, 0.02, 0.5, std(0x7fb896), 2.55, TOP + 0.43, -3.4, { r: 0.005, cast: false });
-  [0xf5e27a, 0xf6a5b8, 0xa9c4f0].forEach((c, i) => box(room, 0.28, 0.14 + i * 0.03, 0.05, std(c), 2.35 + i * 0.24, TOP + 0.5, -3.42 + i * 0.02, { r: 0.008, rz: (i - 1) * 0.12 }));
-  // small jars, a pink tumbler, a blue lighthouse mug, a watch
-  cyl(room, 0.12, 0.12, 0.16, std(0xf0a8b8), 3.15, TOP + 0.08, -3.6); cyl(room, 0.125, 0.125, 0.05, M.white, 3.15, TOP + 0.185, -3.6);
-  cyl(room, 0.14, 0.14, 0.16, std(0x8fcf9a), 3.42, TOP + 0.08, -3.55); cyl(room, 0.145, 0.145, 0.05, M.white, 3.42, TOP + 0.185, -3.55);
-  cyl(room, 0.14, 0.12, 0.6, std(0xf4b8c8, { roughness: 0.4 }), 3.68, TOP + 0.3, -3.3);
-  cyl(room, 0.16, 0.14, 0.3, std(0x4fa3d9, { roughness: 0.45 }), 3.4, TOP + 0.15, -2.75);
-  box(room, 0.05, 0.16, 0.06, std(0x4fa3d9), 3.58, TOP + 0.16, -2.75, { r: 0.02 });
-  cyl(room, 0.025, 0.035, 0.12, M.white, 3.4, TOP + 0.17, -2.6); cyl(room, 0.03, 0.03, 0.03, std(0xd9483b), 3.4, TOP + 0.25, -2.6);
-  box(room, 0.2, 0.05, 0.2, M.ink, 2.7, TOP + 0.03, -2.6, { r: 0.03, ry: 0.4 });
-  box(room, 0.32, 0.03, 0.09, std(0x2f4a80), 2.7, TOP + 0.03, -2.6, { r: 0.015, ry: 0.4 });
+  // The mint crate, small jars, pink tumbler, lighthouse mug, watch and pen case stood on the desk's old right end (x 2 to 3.7). The desk
+  // no longer reaches there, so they are gone; the bed is there now.
+
+  // ── the bed: against the back wall under the window, on the right of the desk, in the sun ─────────────────────────────
+  // 1 unit is about 26 cm here, so this is roughly 0.78 m wide and 1.7 m long, and the mattress top is about 0.3 m high.
+  const BED_X = 2.45, BED_W = 3.0, BED_Z0 = -3.85, BED_Z1 = 2.55, BED_ZC = (BED_Z0 + BED_Z1) / 2, BED_L = BED_Z1 - BED_Z0, FRAME = 0.62;
+  const wood = std(0xc79a68), linen = std(0xf5efe3), duvet = std(0xa9c7bd, { roughness: 0.95 }), duvetFold = std(0xc4dad2, { roughness: 0.95 }), pillowMat = std(0xfbf7ef, { roughness: 0.95 });
+  box(room, BED_W, FRAME, BED_L, wood, BED_X, FRAME / 2, BED_ZC, { r: 0.06 });                                       // the frame / base
+  box(room, BED_W, 1.6, 0.14, wood, BED_X, 0.8, BED_Z0 + 0.09, { r: 0.05 });                                       // the headboard, against the wall
+  box(room, BED_W, 0.9, 0.12, wood, BED_X, 0.45 + 0.45, BED_Z1 - 0.06, { r: 0.05 });                                 // the footboard
+  box(room, BED_W - 0.16, 0.5, BED_L - 0.3, linen, BED_X, FRAME + 0.25, BED_ZC + 0.05, { r: 0.16 });                  // the mattress
+  const top = FRAME + 0.5;                                                                                             // the mattress top
+  box(room, BED_W - 0.1, 0.22, BED_L - 1.75, duvet, BED_X, top + 0.09, BED_Z1 - (BED_L - 1.75) / 2 - 0.12, { r: 0.1 });   // the duvet over the lower part
+  box(room, BED_W - 0.08, 0.28, 0.5, duvetFold, BED_X, top + 0.13, BED_Z0 + 1.95, { r: 0.13 });                        // its folded-back top edge
+  box(room, 1.5, 0.3, 0.85, pillowMat, BED_X, top + 0.15, BED_Z0 + 0.65, { r: 0.13, ry: 0.03, rz: 0.01 });          // one pillow
+                                      // the yellow plush, on a pillow
   // (the plush and figurines that stood on the window sill went with it)
 
   // ── wall collage: painting slots among photobooth strips and prints ─────────
@@ -375,22 +374,33 @@ export function buildRoom(scene) {
   plane(room, 0.55, 0.75, new THREE.MeshStandardMaterial({ map: paperTex(), roughness: 0.9 }), -3.84, 3.0, -2.15, { ry: Math.PI / 2 });
   plane(room, 0.5, 0.68, new THREE.MeshStandardMaterial({ map: paperTex(), roughness: 0.9 }), -3.84, 2.7, -1.5, { ry: Math.PI / 2 });
 
-  // ── string lights: round the window frame ───────────────────────────────────
-  const path = new THREE.CatmullRomCurve3([
-    [wx0 - 0.4, 4.3], [wx0 + 0.3, 4.58], [xc - 0.5, 4.34], [xc + 0.5, 4.6], [wx1 - 0.3, 4.4], [wx1 + 0.28, 4.3],
-    [wx1 + 0.34, 3.6], [wx1 + 0.28, 2.85], [wx1 + 0.33, 2.15],
-  ].map(([x, y]) => new THREE.Vector3(x, y, -3.72)), false, 'catmullrom', 0.3);
-  const wire = new THREE.Mesh(new THREE.TubeGeometry(path, 160, 0.012, 5), std(0x3a2c20));
+  // ── string lights: a closed loop all the way round the window frame ─────────────────────────────────────────────
+  // The bottom run sits just under the frame, so the bed's headboard stays below it.
+  const Lx = wx0 - 0.34, Rx = wx1 + 0.34;
+  const loop = [
+    [Lx, 4.32], [Lx + 0.45, 4.5], [xc - 0.45, 4.36], [xc + 0.45, 4.52], [Rx - 0.45, 4.38], [Rx, 4.32],
+    [Rx + 0.04, 3.7], [Rx, 2.9], [Rx + 0.02, 2.2],
+    [Rx - 0.05, 1.8], [xc + 0.5, 1.72], [xc - 0.5, 1.8], [Lx + 0.05, 1.74],
+    [Lx - 0.03, 2.2], [Lx, 2.9], [Lx - 0.04, 3.7],
+  ];
+  const path = new THREE.CatmullRomCurve3(loop.map(([x, y]) => new THREE.Vector3(x, y, -3.72)), true, 'catmullrom', 0.3);
+  const wire = new THREE.Mesh(new THREE.TubeGeometry(path, 320, 0.012, 5, true), std(0x3a2c20));
   room.add(wire);
   const bulbMat = new THREE.MeshBasicMaterial({ toneMapped: false });
   bulbMat.color.setRGB(1, 0.86, 0.5).multiplyScalar(4.2);
-  const bulbs = 22;
+  // The bottom run is at desk height and seen from directly above in the paint view, so its bulbs are dim and cast no light: at full
+  // strength their glow and point lights washed out the canvas, tubes and palette.
+  const dimMat = new THREE.MeshBasicMaterial({ toneMapped: false });
+  dimMat.color.setRGB(1, 0.86, 0.5).multiplyScalar(1.5);
+  const bulbs = 34;
   const glowLights = [];
+  const stringLights = [wire];   // every visible part of the strip, so main.js can hide it in the overhead paint view
   for (let i = 0; i < bulbs; i++) {
-    const p = path.getPointAt((i + 0.5) / bulbs);
-    const b = new THREE.Mesh(new THREE.SphereGeometry(0.075, 14, 10), bulbMat);
-    b.position.copy(p).add(new THREE.Vector3(0, -0.07, 0.05)); room.add(b);
-    if (i % 5 === 2) {
+    const p = path.getPointAt(i / bulbs);
+    const low = p.y < 2.1;
+    const b = new THREE.Mesh(new THREE.SphereGeometry(low ? 0.06 : 0.075, 14, 10), low ? dimMat : bulbMat);
+    b.position.copy(p).add(new THREE.Vector3(0, -0.07, 0.05)); room.add(b); stringLights.push(b);
+    if (!low && i % 7 === 3) {   // a real light on every seventh bulb of the upper runs (each one costs shading time, so not more)
       const l = new THREE.PointLight(0xffd58a, 1.1, 5, 2); l.position.copy(b.position).add(new THREE.Vector3(0, -0.1, 0.4)); room.add(l); glowLights.push(l);
     }
   }
@@ -408,5 +418,5 @@ export function buildRoom(scene) {
   // the window is behind everything, so light the camera-facing sides with a warm frontal fill
   const fill = new THREE.DirectionalLight(0xfff0d8, 0.85); fill.position.set(7, 6, 9); scene.add(fill);
 
-  return { room, easel, canvasFace, canvasMat, easelHit, CW, CH, frames, hang, sun, hemi, fill, glowLights, reflector, oldPalette };
+  return { room, easel, canvasFace, canvasMat, easelHit, CW, CH, frames, hang, sun, hemi, fill, glowLights, stringLights, reflector, oldPalette };
 }

@@ -28,8 +28,13 @@ scene.background = new THREE.Color(BG);
 scene.fog = new THREE.Fog(BG, 24, 52);
 
 const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 120);
-const HOME = { target: new THREE.Vector3(-0.3, 1.25, -0.4), fov: 30 };
-HOME.pos = new THREE.Vector3(12.3, 9.3, 12.8).add(HOME.target).sub(new THREE.Vector3(-0.3, 1.9, -0.6)).multiplyScalar(1.0);
+// The room view is close on the desk corner (the easel, the window, the wall collage), like the reference photos, rather than the whole
+// cutaway room from far away. Aim at the middle of the desk and stand off from it at a set bearing, elevation and distance.
+const HOME = { target: new THREE.Vector3(-0.15, 1.7, -2.7), fov: 30 };
+{
+  const bearing = THREE.MathUtils.degToRad(30), elevation = THREE.MathUtils.degToRad(27), distance = 11.0;   // bearing 0 = straight in front of the desk
+  HOME.pos = HOME.target.clone().add(new THREE.Vector3(Math.sin(bearing) * Math.cos(elevation), Math.sin(elevation), Math.cos(bearing) * Math.cos(elevation)).multiplyScalar(distance));
+}
 camera.position.copy(HOME.pos); camera.lookAt(HOME.target);
 
 // ── post: bloom → vignette/grade → tone map ──────────────────────────────────
@@ -180,7 +185,7 @@ function enterPaint() {
   mode = 'travelling';
   hover(false);
   // paint mode opens on the desk: the canvas lies flat and the camera goes overhead (the card's button stands it back up)
-  deskMode = true; ui.setDesk(true); view.onChange();
+  deskMode = true; ui.setDesk(true); view.onChange(); showStringLights(false);
   travel(withEasel(easelFlat, paintPose), () => {
     mode = 'paint';
     document.body.classList.remove('travelling'); document.body.classList.add('painting');
@@ -192,6 +197,9 @@ function enterPaint() {
 
 // The two ways to paint: at the standing easel, or with the canvas put down flat on the desk (bird's-eye view).
 // Switching happens inside paint mode: the paper fades out, the easel and camera move, the paper fades back in.
+// The fairy lights sit at the back edge of the desk and, seen from directly above, their glow washes out the canvas, jars and tubes,
+// so the bulbs and wire are hidden in the overhead view (their light stays on) and shown again everywhere else.
+const showStringLights = (on) => { for (const o of world.stringLights) o.visible = on; poke(4); };
 let deskMode = true;   // paint mode opens on the desk, with the canvas flat and the tubes and tray around it
 const view = {
   get down() { return deskMode; },
@@ -201,7 +209,7 @@ const view = {
     mode = 'travelling'; painter.up(); paintEl.classList.remove('on');
     document.getElementById('cursor').style.opacity = 0;
     const from = down ? easelUp : easelFlat, to = down ? easelFlat : easelUp;
-    deskMode = down; view.onChange(); ui.setDesk(down);
+    deskMode = down; view.onChange(); ui.setDesk(down); showStringLights(!down);
     travel(withEasel(to, paintPose), () => {
       mode = 'paint';
       document.body.classList.remove('travelling');
@@ -221,6 +229,7 @@ function leavePaint(hang = true) {
   document.getElementById('cursor').style.opacity = 0;
   const hung = hang && painter.dirty ? painter.composite() : null;
   document.body.classList.remove('painting');
+  showStringLights(true);
   const wasDown = deskMode; deskMode = true; view.onChange(); ui.setDesk(true);   // the next visit starts on the desk again
   travel(homePose(), () => {
     mode = 'room';
