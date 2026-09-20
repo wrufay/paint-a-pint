@@ -1,14 +1,14 @@
 # paint-a-pint 🎨⊹°
 
-**software allowing you to paint here, there, and everywhere**.
+**software that lets you paint here, there, and everywhere**.
 
-Welcome to [Fay's](https://faywu.ca/) solo hack for _[Hack the North '26](https://hackthenorth2026.devpost.com/)_ (๑ᵔ⤙ᵔ๑)
+Welcome to [Fay's](https://faywu.ca/) solo build for _[Hack the North '26](https://hackthenorth2026.devpost.com/)_ (๑ᵔ⤙ᵔ๑)
 
 ![paint-a-pint cover: the title in red paint on crumpled paper, with a paint bucket of brushes, a dictionary card for "pint", and two taped-on photos of a desk and a small acrylic landscape](docs/assets/cover.png)
 
 ![Two polaroids: the 3D room with a desk, easel, window and bed, and the overhead canvas view with paint tubes](docs/assets/screenshots.png)
 
-_app screenshots_
+
 
 ## What is it?
 
