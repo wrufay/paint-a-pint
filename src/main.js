@@ -57,7 +57,7 @@ const paintTex = new THREE.CanvasTexture(painter.albedoCanvas); paintTex.colorSp
 const paintNormal = new THREE.CanvasTexture(painter.normalCanvas); paintNormal.anisotropy = 8;
 world.canvasMat.map = paintTex;
 world.canvasMat.normalMap = paintNormal;
-world.canvasMat.normalScale.set(1, 1);
+world.canvasMat.normalScale.set(1.6, 1.6); // 1 is subtle, 3 makes the weave blotchy
 world.canvasMat.roughness = 0.8;
 const uploadPaint = () => { if (painter.syncMaps()) { paintTex.needsUpdate = true; paintNormal.needsUpdate = true; } };
 
@@ -233,4 +233,4 @@ resize();
 requestAnimationFrame(frame);
 
 // tiny hook for automated screenshots / debugging
-window.__paint = { enterPaint, leavePaint, painter, world, camera, get mode() { return mode; } };
+window.__paint = { enterPaint, leavePaint, painter, world, camera, uploadPaint, get mode() { return mode; } };
