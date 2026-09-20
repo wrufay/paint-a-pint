@@ -56,7 +56,12 @@ composer.addPass(new OutputPass());
 const world = buildRoom(scene);
 // the paint tubes and brushes on the desk; their labels are drawn on a canvas in DM Sans, so wait for the font first
 Promise.all([document.fonts.load('500 20px "DM Sans"'), document.fonts.load('700 20px "DM Sans"')]).catch(() => {})
-  .then(() => { world.props = addPaintProps(world.room); poke(6); shadowWake = 6; });
+  .then(() => {
+    world.props = addPaintProps(world.room);
+    ui.onSelect = (p) => { world.props.select(p.id); poke(4); shadowWake = 3; };   // the chosen paint's tube lifts off the pile
+    world.props.select(painter.paint.id);
+    poke(6); shadowWake = 6;
+  });
 if (coarse) world.sun.shadow.mapSize.set(2048, 2048);
 const painter = new AcrylicPainter(document.getElementById('paint-canvas'), document.getElementById('grain'));
 // the easel shows the live painting canvas, so paint keeps drying (and showing it) while you look around the room
@@ -212,7 +217,7 @@ function leavePaint(hang = true) {
   }, wasDown ? { from: easelFlat, to: easelUp, legs: true } : undefined);   // only lift the easel back up if it was put down
 }
 
-initAcrylicUI(painter, { onBack: () => leavePaint(true), view, isPainting: () => mode === 'paint' });
+const ui = initAcrylicUI(painter, { onBack: () => leavePaint(true), view, isPainting: () => mode === 'paint' });
 addEventListener('keydown', (e) => { if (e.key === 'Escape') leavePaint(false); });
 
 // ── picking ──────────────────────────────────────────────────────────────────
@@ -230,10 +235,35 @@ function pick(e) {
   ray.setFromCamera(mouse, camera);
   return ray.intersectObjects(world.easelHit, false).length > 0;
 }
-renderer.domElement.addEventListener('pointermove', (e) => { mouse.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); if (mode === 'room') hover(pick(e)); });
+// The tubes and brushes on the desk: they glow under the pointer, a tube picks that paint and a brush picks that shape.
+// This works in the room and in paint mode (outside the paper and the card, which sit on top of the 3D view).
+function pickProp(e) {
+  if (!world.props) return null;
+  ray.setFromCamera(new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1), camera);
+  const hit = ray.intersectObjects([...world.props.tubes, ...world.props.brushes], true)[0];
+  return hit ? world.props.owner(hit.object) : null;
+}
+let hoverProp = null;
+function setHoverProp(o) {
+  if (o === hoverProp || !world.props) return;
+  hoverProp = o; world.props.hover(o); poke();
+  renderer.domElement.style.cursor = o || hovering ? 'pointer' : '';
+}
+renderer.domElement.addEventListener('pointermove', (e) => {
+  mouse.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  if (mode === 'room') hover(pick(e));
+  if (mode === 'room' || mode === 'paint') setHoverProp(pickProp(e));
+});
 renderer.domElement.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
 renderer.domElement.addEventListener('pointerup', (e) => {
-  if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 6 && mode === 'room' && pick(e)) enterPaint();
+  if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 6 && (mode === 'room' || mode === 'paint')) {
+    const prop = pickProp(e);
+    if (prop) {
+      if (prop.userData.paint) ui.choose(prop.userData.paint);
+      if (prop.userData.shape) ui.setShape(prop.userData.shape);
+      if (mode === 'room') enterPaint();
+    } else if (mode === 'room' && pick(e)) enterPaint();
+  }
   downAt = null;
 });
 renderer.domElement.addEventListener('pointercancel', () => { downAt = null; });

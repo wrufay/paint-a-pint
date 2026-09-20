@@ -122,11 +122,13 @@ export function initAcrylicUI(painter, { onBack, view, isPainting = () => true }
   const swatches = document.getElementById('swatches');
   const size = document.getElementById('size');
 
+  const ui = { choose: null, setShape: null, onSelect: null };   // what the 3D props in the room use to drive the card
   let chipEl = null;   // the palette's "brush colour" chip
   const cssColour = (rgb) => '#' + rgb.map((v) => Math.round(Math.min(1, linearToSrgb(Math.max(0, v))) * 255).toString(16).padStart(2, '0')).join('');
   const sync = () => {
     swatches.querySelectorAll('.sw').forEach((b) => b.classList.toggle('sel', b.dataset.id === painter.paint.id));
     if (chipEl) chipEl.style.background = cssColour(painter.color);
+    if (ui.onSelect) ui.onSelect(painter.paint);
   };
   BOX.forEach((p, i) => {
     const b = document.createElement('button');
@@ -300,6 +302,8 @@ export function initAcrylicUI(painter, { onBack, view, isPainting = () => true }
   trayCanvas.addEventListener('pointerup', trayEnd);
   trayCanvas.addEventListener('pointercancel', trayEnd);
 
+  ui.choose = choose;
+  ui.setShape = (k) => { painter.engine.params.shape = k; saveParams(painter.engine.params); syncShape(); };
   const esc = document.getElementById('esc'); if (esc) esc.textContent = 'esc: back to the room, painting stays on the easel';
   sync();
 
@@ -356,4 +360,5 @@ export function initAcrylicUI(painter, { onBack, view, isPainting = () => true }
   paper.addEventListener('pointercancel', end);
   paper.addEventListener('pointerleave', () => { cursor.style.opacity = 0; });
   paper.addEventListener('pointerenter', () => { cursor.style.opacity = 1; updateCursor(); });
+  return ui;
 }

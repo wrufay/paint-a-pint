@@ -177,6 +177,7 @@ export function addPaintProps(room) {
     const wobble = Math.sin((idx + 1) * 12.9898);                         // a little untidiness, deterministic
     tube.rotation.set(-Math.PI / 2, 0, wobble * 0.07);                    // lay it down: +y (the cap) goes to -z
     tube.position.set(x, y, wobble * 0.012);
+    tube.userData.baseY = y;
     pile.add(tube); out.tubes.push(tube);
   };
   const gap = 0.09;
@@ -190,11 +191,23 @@ export function addPaintProps(room) {
     const b = makeBrush(shape, colour);
     b.position.set(-0.03 + i * 0.03, 0.03, -0.01 + (i - 1) * 0.012);
     b.rotation.set(tiltX, i * 1.1, -tiltZ);                               // lean them against the rim
+    b.userData.shape = shape;
     jar.add(b); out.brushes.push(b);
   });
   out.jar = jar;
   const glass = makeGlass({ radius: 0.07, height: 0.19, water: 0.12, waterColour: 0xcfe0e6, waterOpacity: 0.4 });
   glass.position.set(1.85, DESK_TOP, -3.08); room.add(glass);
   out.glass = glass;
+
+  // What the props do: clicking a tube picks that paint and clicking a brush picks that shape (main.js does the picking).
+  // The chosen paint's tube lifts a little off the pile, and whatever the pointer is over glows.
+  out.select = (paintId) => {
+    for (const t of out.tubes) t.position.y = t.userData.baseY + (t.userData.paint.id === paintId ? 0.035 : 0);
+  };
+  const glow = (obj, on) => obj.traverse((m) => { if (m.material && m.material.emissive) m.material.emissive.setRGB(on ? 0.16 : 0, on ? 0.12 : 0, on ? 0.05 : 0); });
+  let lit = null;
+  out.hover = (obj) => { if (obj === lit) return; if (lit) glow(lit, false); lit = obj; if (lit) glow(lit, true); };
+  // the tube or brush at the top of a ray hit's parent chain, as { paint } or { shape }
+  out.owner = (object) => { for (let o = object; o; o = o.parent) if (o.userData && (o.userData.paint || o.userData.shape)) return o; return null; };
   return out;
 }
