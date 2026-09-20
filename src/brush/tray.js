@@ -22,23 +22,27 @@ export class Tray {
     e.setParams({ weave: 0.025, relief: 3, wetSeconds: 300, gloss: 0.3, hueJitter: 0, bristleTint: 0 });   // a tray keeps paint workable for minutes
     e.clear();
     this.slot = 0;
-    this.mixing = false;
+    this.mixing = false; this.squeezing = false;
   }
 
-  // run `fn` with the tray engine's params temporarily set to `p`
-  _with(p, fn) { const P = this.engine.params, keep = { ...P }; Object.assign(P, p); try { return fn(); } finally { Object.assign(P, keep); } }
-
-  // squeeze a blob of `paint` (an entry from paints.js) onto the next free spot
-  squeeze(paint) {
-    const [cx, cy] = SLOTS[this.slot++ % SLOTS.length], e = this.engine;
+  // Squeeze `paint` (an entry from paints.js) out at (x, y), or at the next free spot if no position is given. Dragging on after
+  // beginSqueeze lays a line of paint, like moving the tube across the tray.
+  beginSqueeze(paint, x, y) {
+    const e = this.engine;
     e.snapshot();
-    this._with(BLOB, () => {
-      e.beginStroke(cx, cy, 0.95, hexToLinear(paint.hex), paint);
-      for (let k = 1; k <= 28; k++) e.strokeTo(cx + Math.cos(k * 0.45) * 7, cy + Math.sin(k * 0.45) * 7, 0.95);   // a small swirl builds the blob up thick
-      e.endStroke();
-    });
-    return [cx, cy];
+    if (x === undefined) [x, y] = SLOTS[this.slot++ % SLOTS.length];
+    this._keep = { ...e.params }; Object.assign(e.params, BLOB);
+    e.beginStroke(x, y, 0.95, hexToLinear(paint.hex), paint);
+    for (let k = 1; k <= 28; k++) e.strokeTo(x + Math.cos(k * 0.45) * 7, y + Math.sin(k * 0.45) * 7, 0.95);   // a small swirl builds the blob up thick
+    this.squeezing = true;
+    return [x, y];
   }
+  squeezeTo(x, y) { if (this.squeezing) this.engine.strokeTo(x, y, 0.95); }
+  endSqueeze() {
+    if (!this.squeezing) return;
+    this.engine.endStroke(); Object.assign(this.engine.params, this._keep); this.squeezing = false;
+  }
+  squeeze(paint, x, y) { const at = this.beginSqueeze(paint, x, y); this.endSqueeze(); return at; }
 
   // the colour of the paint around (x, y), weighted by how much paint is there; null on bare tray
   sample(x, y) {
