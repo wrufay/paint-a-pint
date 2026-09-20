@@ -418,5 +418,7 @@ export function buildRoom(scene) {
   // the window is behind everything, so light the camera-facing sides with a warm frontal fill
   const fill = new THREE.DirectionalLight(0xfff0d8, 0.85); fill.position.set(7, 6, 9); scene.add(fill);
 
-  return { room, easel, canvasFace, canvasMat, easelHit, CW, CH, frames, hang, sun, hemi, fill, glowLights, stringLights, reflector, oldPalette };
+  return { room, easel, canvasFace, canvasMat, easelHit, CW, CH, frames, hang, sun, hemi, fill, glowLights, stringLights, reflector, oldPalette,
+    // for dragging the chair around (src/chair.js): the chair itself and what it can bump into, as [x0, x1, z0, z1] on the floor
+    chair, chairRects: [[DESK_L, DESK_R, -3.9, -2.4], [BED_X - BED_W / 2, BED_X + BED_W / 2, BED_Z0, BED_Z1]] };
 }

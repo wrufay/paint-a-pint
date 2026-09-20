@@ -8,6 +8,7 @@ import { buildRoom } from './room.js';
 import { AcrylicPainter, initAcrylicUI } from './acrylic-painter.js';
 import { addPaintProps, TABLE } from './props.js';
 import { addTray3D } from './tray3d.js';
+import { ChairPhysics } from './chair.js';
 
 const BG = 0x1c1915;
 const app = document.getElementById('app');
@@ -29,12 +30,15 @@ scene.fog = new THREE.Fog(BG, 24, 52);
 
 const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 120);
 // The room view is close on the desk corner (the easel, the window, the wall collage), like the reference photos, rather than the whole
-// cutaway room from far away. Aim at the middle of the desk and stand off from it at a set bearing, elevation and distance.
+// cutaway room from far away. The camera orbits a fixed point: `az` is the bearing (0 = straight in front of the desk, positive swings
+// towards the bed), `el` the elevation and `dist` the distance. You can drag to change az and el, and scroll or pinch to change dist
+// (see "look around" below); `cur` is what the camera shows and eases towards `goal`.
 const HOME = { target: new THREE.Vector3(-0.15, 1.7, -2.7), fov: 30 };
-{
-  const bearing = THREE.MathUtils.degToRad(30), elevation = THREE.MathUtils.degToRad(27), distance = 11.0;   // bearing 0 = straight in front of the desk
-  HOME.pos = HOME.target.clone().add(new THREE.Vector3(Math.sin(bearing) * Math.cos(elevation), Math.sin(elevation), Math.cos(bearing) * Math.cos(elevation)).multiplyScalar(distance));
-}
+const HOME_VIEW = { az: THREE.MathUtils.degToRad(30), el: THREE.MathUtils.degToRad(27), dist: 11.0 };
+const LIMITS = { az: [THREE.MathUtils.degToRad(-14), THREE.MathUtils.degToRad(82)], el: [THREE.MathUtils.degToRad(8), THREE.MathUtils.degToRad(76)], dist: [4.5, 16] };
+const orbit = { cur: { ...HOME_VIEW }, goal: { ...HOME_VIEW } };
+const orbitPos = (o) => HOME.target.clone().add(new THREE.Vector3(Math.sin(o.az) * Math.cos(o.el), Math.sin(o.el), Math.cos(o.az) * Math.cos(o.el)).multiplyScalar(o.dist));
+HOME.pos = orbitPos(orbit.cur);
 camera.position.copy(HOME.pos); camera.lookAt(HOME.target);
 
 // ── post: bloom → vignette/grade → tone map ──────────────────────────────────
@@ -61,6 +65,9 @@ composer.addPass(new OutputPass());
 // ── world ────────────────────────────────────────────────────────────────────
 const world = buildRoom(scene);
 // the mixing tray on the desk (it replaces the old wooden palette prop), then the paint tubes and brushes
+// the office chair can be grabbed and shoved around the floor (room view only); it bumps off the walls, the desk and the bed
+const CHAIR_R = 0.8;
+const chairPhys = new ChairPhysics(world.chair, { rects: world.chairRects, radius: CHAIR_R, bounds: { minX: -3.85 + CHAIR_R, maxX: 4.1 - CHAIR_R, minZ: -3.85 + CHAIR_R, maxZ: 4.1 - CHAIR_R } });
 world.tray = addTray3D(world.room);
 world.tray.replace(world.oldPalette);
 // the paint tubes and brushes on the desk; their labels are drawn on a canvas in DM Sans, so wait for the font first
@@ -120,9 +127,9 @@ function resize() {
 
 function applyPose(p) { camera.position.copy(p.pos); camera.quaternion.copy(p.quat); camera.fov = p.fov; camera.updateProjectionMatrix(); }
 
-function homePose() {
-  const c = new THREE.PerspectiveCamera(); c.position.copy(HOME.pos); c.lookAt(HOME.target);
-  return { pos: HOME.pos.clone(), quat: c.quaternion.clone(), fov: HOME.fov };
+function homePose() {   // the room view as you last left it (the orbit, not always the starting view)
+  const pos = orbitPos(orbit.cur), c = new THREE.PerspectiveCamera(); c.position.copy(pos); c.lookAt(HOME.target);
+  return { pos, quat: c.quaternion.clone(), fov: HOME.fov };
 }
 
 // camera square-on to the canvas, centred, with the note card to the right on wide screens
@@ -381,32 +388,100 @@ function trayUp(e) {
   trayDrag = null; poke(3);
   return true;
 }
+// ── the chair: grab it in the room view and drag it about; let go and it keeps rolling ──────────────────────────────────
+let chairDrag = null;
+const chairRay = (e) => { ray.setFromCamera(new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1), camera); return ray; };
+function chairDown(e) {
+  if (mode !== 'room' || chairDrag) return false;
+  const h = chairPhys.hit(chairRay(e));
+  if (!h) return false;
+  chairPhys.grab(ray, h); chairDrag = { id: e.pointerId };
+  renderer.domElement.setPointerCapture(e.pointerId); renderer.domElement.style.cursor = 'grabbing'; poke(3);
+  return true;
+}
+function chairUp(e) {
+  if (!chairDrag || e.pointerId !== chairDrag.id) return false;
+  chairPhys.release(); chairDrag = null; renderer.domElement.style.cursor = ''; poke(3);
+  return true;
+}
+// ── look around (room view): drag to turn the room, scroll or pinch to zoom, double-click to go back to the starting view ──────────
+const look = { ptrs: new Map(), moved: false, pinch: null };   // active pointers, whether this gesture became a drag, and a pinch's start
+const clampTo = (v, [lo, hi]) => Math.min(hi, Math.max(lo, v));
+function lookDown(e) {
+  if (mode !== 'room') return;
+  if (look.ptrs.size === 0) look.moved = false;
+  look.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY });
+  renderer.domElement.setPointerCapture(e.pointerId);
+  if (look.ptrs.size === 2) { const [a, b] = [...look.ptrs.values()]; look.pinch = { d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, dist0: orbit.goal.dist }; look.moved = true; }
+}
+function lookMove(e) {   // returns true if this move belongs to a look-around gesture
+  const p = look.ptrs.get(e.pointerId);
+  if (!p || mode !== 'room') return false;
+  const dx = e.clientX - p.x, dy = e.clientY - p.y;
+  p.x = e.clientX; p.y = e.clientY;
+  if (look.ptrs.size >= 2 && look.pinch) {
+    const [a, b] = [...look.ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+    orbit.goal.dist = clampTo(look.pinch.dist0 * look.pinch.d0 / d, LIMITS.dist); poke(3);
+    return true;
+  }
+  if (!look.moved && Math.hypot(p.x - p.x0, p.y - p.y0) < 6) return false;   // still a click, not a drag
+  look.moved = true;
+  orbit.goal.az = clampTo(orbit.goal.az - dx * 0.0032, LIMITS.az);
+  orbit.goal.el = clampTo(orbit.goal.el + dy * 0.0028, LIMITS.el);
+  renderer.domElement.style.cursor = 'grabbing'; poke(3);
+  return true;
+}
+function lookUp(e) { look.ptrs.delete(e.pointerId); if (look.ptrs.size < 2) look.pinch = null; if (look.ptrs.size === 0) renderer.domElement.style.cursor = ''; }
+renderer.domElement.addEventListener('wheel', (e) => {
+  if (mode !== 'room') return;
+  e.preventDefault();
+  orbit.goal.dist = clampTo(orbit.goal.dist * Math.exp(e.deltaY * (e.ctrlKey ? 0.01 : 0.0014)), LIMITS.dist); poke(3);   // (a trackpad pinch arrives as a ctrl-wheel)
+}, { passive: false });
+// A double tap on empty space goes back to the starting view. (Detected here: the browser's own dblclick is not delivered while the
+// pointer is captured for dragging, and it would not fire reliably on a touch screen either.)
+let lastTap = null;
+function tapEmpty(e) {
+  const t = performance.now();
+  if (lastTap && t - lastTap.t < 380 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 24) { Object.assign(orbit.goal, HOME_VIEW); poke(3); lastTap = null; }
+  else lastTap = { t, x: e.clientX, y: e.clientY };
+}
+
 renderer.domElement.addEventListener('pointermove', (e) => {
   mouse.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  if (chairDrag) { if (e.pointerId === chairDrag.id) chairPhys.dragTo(chairRay(e)); return; }
+  if (lookMove(e)) return;
   if (trayDrag) { trayMove(e); return; }
   if (mode === 'room') hover(pick(e));
   if (mode === 'room' || mode === 'paint') setHoverProp(pickProp(e));
   moveTip(e);
-  renderer.domElement.style.cursor = hoverProp || hovering ? 'pointer' : trayPixel(e) ? 'crosshair' : '';
+  renderer.domElement.style.cursor = hoverProp || hovering ? 'pointer' : trayPixel(e) ? 'crosshair' : mode === 'room' && chairPhys.hit(chairRay(e)) ? 'grab' : '';
 });
-renderer.domElement.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; if (mode === 'paint' && !pickProp(e)) trayDown(e); });
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  downAt = [e.clientX, e.clientY];
+  if (mode === 'room' && !pickProp(e) && !pick(e) && chairDown(e)) { downAt = null; return; }   // the easel and the tubes win over the chair if they are in front
+  lookDown(e);
+  if (mode === 'paint' && !pickProp(e)) trayDown(e);
+});
 renderer.domElement.addEventListener('pointerup', (e) => {
+  if (chairUp(e)) { downAt = null; return; }
+  const wasLook = look.moved; lookUp(e);
   if (trayUp(e)) { downAt = null; return; }
-  if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 6 && (mode === 'room' || mode === 'paint')) {
+  if (downAt && !wasLook && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 6 && (mode === 'room' || mode === 'paint')) {
     const prop = pickProp(e);
     if (prop) {
       if (prop.userData.paint) ui.choose(prop.userData.paint);
       if (prop.userData.shape) ui.setShape(prop.userData.shape);
       if (mode === 'room') enterPaint();
     } else if (mode === 'room' && pick(e)) enterPaint();
+    else if (mode === 'room') tapEmpty(e);
   }
   downAt = null;
 });
-renderer.domElement.addEventListener('pointercancel', (e) => { trayUp(e); downAt = null; });
+renderer.domElement.addEventListener('pointercancel', (e) => { chairUp(e); lookUp(e); trayUp(e); downAt = null; });
 
 // ── loop ─────────────────────────────────────────────────────────────────────
 let texT = 0;
-const sph = new THREE.Spherical(), off = new THREE.Vector3(), tmp = new THREE.Vector3();
+let lastNow = performance.now();
 function frame(now) {
   requestAnimationFrame(frame);
   let moving = false;   // the camera, the easel or a hung frame is moving, so shadows need redrawing too
@@ -426,19 +501,22 @@ function frame(now) {
     }
     if (k >= 1) { const d = tween.done; tween = null; d(); }
   } else if (mode === 'room') {
-    // gentle limited parallax orbit around the diorama
-    mouseSm.lerp(mouse, 0.05);
-    const drifting = mouseSm.distanceToSquared(mouse) > 2e-6;   // still catching up with the pointer
-    if (drifting || wake > 0) {
-      off.subVectors(HOME.pos, HOME.target); sph.setFromVector3(off);
-      sph.theta += -mouseSm.x * 0.12; sph.phi += mouseSm.y * 0.05;
-      tmp.setFromSpherical(sph).add(HOME.target);
-      camera.position.copy(tmp); camera.lookAt(HOME.target);
+    // look around: ease the shown view towards the one you asked for
+    const kk = 1 - Math.exp(-Math.min(0.05, (now - lastNow) / 1000) * 14);
+    let settling = false;
+    for (const key of ['az', 'el', 'dist']) {
+      const d = orbit.goal[key] - orbit.cur[key];
+      if (Math.abs(d) > (key === 'dist' ? 0.002 : 0.0002)) { orbit.cur[key] += d * kk; settling = true; } else orbit.cur[key] = orbit.goal[key];
+    }
+    if (settling || wake > 0) {
+      camera.position.copy(orbitPos(orbit.cur)); camera.lookAt(HOME.target);
       camera.fov = HOME.fov; camera.updateProjectionMatrix();
-      if (drifting) poke(2);
+      if (settling) { poke(2); shadowWake = 2; }
     }
   }
 
+  if (chairPhys.active) { chairPhys.step((now - lastNow) / 1000); moving = true; }
+  lastNow = now;
   painter.tick(now);
   if (world.tray && world.tray.update(now / 1000)) poke(2);   // the tray dries too
   // the 3D easel only needs the new pixels when it can be seen (the paint overlay hides it), and not every frame
@@ -466,4 +544,4 @@ resize();
 requestAnimationFrame(frame);
 
 // tiny hook for automated screenshots / debugging
-window.__paint = { enterPaint, leavePaint, painter, world, camera, renderer, uploadPaint, ui, get mode() { return mode; }, get deskMode() { return deskMode; } };
+window.__paint = { orbit, chairPhys, enterPaint, leavePaint, painter, world, camera, renderer, uploadPaint, ui, get mode() { return mode; }, get deskMode() { return deskMode; } };
