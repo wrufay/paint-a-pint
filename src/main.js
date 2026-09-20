@@ -91,6 +91,40 @@ world.canvasMat.normalScale.set(1.6, 1.6); // 1 is subtle, 3 makes the weave blo
 world.canvasMat.roughness = 0.8;
 const uploadPaint = () => { if (painter.syncMaps()) { paintTex.needsUpdate = true; paintNormal.needsUpdate = true; } };
 
+// ── view a hung painting on the easel (view only) ───────────────────────────────────────────────────────────────────────────────────
+// Click a painting on the wall and it goes up on the easel while the camera flies in to look at it. Only a flat picture of a hung painting
+// is kept (not its paint state), so this is view-only: click anywhere or press Esc to go back out. Your painting in progress is untouched
+// underneath, and the easel shows it again as soon as you are back in the room.
+let onEasel = null;   // the wall frame whose painting is on the easel, or null when the easel shows the live canvas
+const hintEl = document.getElementById('hint'), HINT = hintEl ? hintEl.textContent : '';
+function showOnEasel(slot) {
+  if (!slot.easelTex) { const t = new THREE.CanvasTexture(slot.canvas); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; slot.easelTex = t; }
+  world.canvasMat.map = slot.easelTex; world.canvasMat.normalMap = null; world.canvasMat.needsUpdate = true;
+  onEasel = slot;
+  poke(4); shadowWake = 3;
+}
+function showLive() {
+  if (!onEasel) return;
+  world.canvasMat.map = paintTex; world.canvasMat.normalMap = paintNormal; world.canvasMat.needsUpdate = true;
+  onEasel = null;
+  poke(4); shadowWake = 3;
+}
+function viewPainting(slot) {
+  if (mode !== 'room') return;
+  mode = 'travelling'; hover(false); setHoverFrame(null);
+  showOnEasel(slot);
+  travel(easelViewPose(), () => {
+    mode = 'view'; document.body.classList.remove('travelling'); poke(6);
+    if (hintEl) hintEl.textContent = '✦ viewing a painting · click anywhere or press Esc to go back';
+  });
+}
+function leaveView() {
+  if (mode !== 'view') return;
+  mode = 'travelling';
+  if (hintEl) hintEl.textContent = HINT;
+  travel(homePose(), () => { mode = 'room'; document.body.classList.remove('travelling'); showLive(); poke(6); });
+}
+
 // ── the easel lies flat on the desk while you paint (bird's-eye view), and stands up again in the room ──
 const DESK_TOP = 1.5; // desk surface height in room.js
 const easelUp = { pos: world.easel.position.clone(), rotX: world.easel.rotation.x };
@@ -123,6 +157,7 @@ function resize() {
   if (mode === 'room') { camera.fov = HOME.fov; }
   camera.updateProjectionMatrix();
   if (mode === 'paint') { applyPose(paintPose()); layoutPaper(); }
+  else if (mode === 'view') applyPose(easelViewPose());
 }
 
 function applyPose(p) { camera.position.copy(p.pos); camera.quaternion.copy(p.quat); camera.fov = p.fov; camera.updateProjectionMatrix(); }
@@ -141,6 +176,17 @@ function deskPose() {
   const pos = new THREE.Vector3(V.x, DESK_TOP + dist, V.z);
   const holder = new THREE.PerspectiveCamera(); holder.position.copy(pos); holder.up.set(0, 0, -1); holder.lookAt(V.x, DESK_TOP, V.z);   // (a camera, so it looks down -z)
   return { pos, quat: holder.quaternion.clone(), fov };
+}
+
+// The camera square-on to the standing easel, with the canvas filling most of the screen (for viewing a hung painting).
+function easelViewPose() {
+  world.easel.updateMatrixWorld(true);
+  const q = new THREE.Quaternion(); world.canvasFace.getWorldQuaternion(q);
+  const c = world.canvasFace.getWorldPosition(new THREE.Vector3());
+  const n = new THREE.Vector3(0, 0, 1).applyQuaternion(q);
+  const fov = 30, half = Math.tan(THREE.MathUtils.degToRad(fov / 2)), aspect = camera.aspect;
+  const dist = Math.max(world.CH / 0.8 / (2 * half), world.CW / 0.86 / (2 * half * aspect));
+  return { pos: c.clone().addScaledVector(n, dist), quat: q, fov };
 }
 
 function paintPose() {
@@ -189,6 +235,7 @@ function travel(to, done, easel) {
 
 function enterPaint() {
   if (mode !== 'room') return;
+  showLive();   // you paint on the live canvas, so a hung painting on the easel goes back on the wall (it never left it)
   mode = 'travelling';
   hover(false);
   // paint mode opens on the desk: the canvas lies flat and the camera goes overhead (the card's button stands it back up)
@@ -251,7 +298,7 @@ function leavePaint(hang = true) {
 }
 
 const ui = initAcrylicUI(painter, { onBack: () => leavePaint(true), view, isPainting: () => mode === 'paint' });
-addEventListener('keydown', (e) => { if (e.key === 'Escape') leavePaint(false); });
+addEventListener('keydown', (e) => { if (e.key === 'Escape') { leavePaint(false); leaveView(); } });
 
 // ── picking ──────────────────────────────────────────────────────────────────
 const ray = new THREE.Raycaster();
@@ -404,6 +451,31 @@ function chairUp(e) {
   chairPhys.release(); chairDrag = null; renderer.domElement.style.cursor = ''; poke(3);
   return true;
 }
+// The paintings hung on the wall. Hovering one (checked against the frames only, which is cheap) lights it up; a click is checked against
+// the whole room, so something standing in front of a frame is what gets clicked, not the frame behind it.
+const filledFrames = () => world.frames.filter((f) => f.filled);
+let hoverFrame = null;
+function frameAt(e) {
+  const fs = filledFrames();
+  if (!fs.length) return null;
+  ray.setFromCamera(new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1), camera);
+  const hit = ray.intersectObjects(fs.map((f) => f.art), false)[0];
+  return hit ? fs.find((f) => f.art === hit.object) : null;
+}
+function pickFrame(e) {
+  const f = frameAt(e);
+  if (!f) return null;
+  const first = ray.intersectObject(world.room, true)[0];   // (frameAt left the ray pointing where the click was)
+  return first && first.object === f.art ? f : null;
+}
+function setHoverFrame(f) {
+  if (f === hoverFrame) return;
+  if (hoverFrame) hoverFrame.art.material.emissive.setRGB(0, 0, 0);
+  hoverFrame = f;
+  if (f) f.art.material.emissive.setRGB(0.12, 0.1, 0.05);
+  poke();
+}
+
 // ── look around (room view): drag to turn the room, scroll or pinch to zoom, double-click to go back to the starting view ──────────
 const look = { ptrs: new Map(), moved: false, pinch: null };   // active pointers, whether this gesture became a drag, and a pinch's start
 const clampTo = (v, [lo, hi]) => Math.min(hi, Math.max(lo, v));
@@ -453,8 +525,10 @@ renderer.domElement.addEventListener('pointermove', (e) => {
   if (trayDrag) { trayMove(e); return; }
   if (mode === 'room') hover(pick(e));
   if (mode === 'room' || mode === 'paint') setHoverProp(pickProp(e));
+  const overFrame = mode === 'room' ? frameAt(e) : null;
+  setHoverFrame(overFrame);
   moveTip(e);
-  renderer.domElement.style.cursor = hoverProp || hovering ? 'pointer' : trayPixel(e) ? 'crosshair' : mode === 'room' && chairPhys.hit(chairRay(e)) ? 'grab' : '';
+  renderer.domElement.style.cursor = hoverProp || hovering || overFrame ? 'pointer' : trayPixel(e) ? 'crosshair' : mode === 'room' && chairPhys.hit(chairRay(e)) ? 'grab' : '';
 });
 renderer.domElement.addEventListener('pointerdown', (e) => {
   downAt = [e.clientX, e.clientY];
@@ -466,6 +540,7 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   if (chairUp(e)) { downAt = null; return; }
   const wasLook = look.moved; lookUp(e);
   if (trayUp(e)) { downAt = null; return; }
+  if (mode === 'view') { if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 6) leaveView(); downAt = null; return; }
   if (downAt && !wasLook && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 6 && (mode === 'room' || mode === 'paint')) {
     const prop = pickProp(e);
     if (prop) {
@@ -473,7 +548,10 @@ renderer.domElement.addEventListener('pointerup', (e) => {
       if (prop.userData.shape) ui.setShape(prop.userData.shape);
       if (mode === 'room') enterPaint();
     } else if (mode === 'room' && pick(e)) enterPaint();
-    else if (mode === 'room') tapEmpty(e);
+    else if (mode === 'room') {
+      const f = pickFrame(e);
+      if (f) viewPainting(f); else tapEmpty(e);
+    }
   }
   downAt = null;
 });
@@ -544,4 +622,4 @@ resize();
 requestAnimationFrame(frame);
 
 // tiny hook for automated screenshots / debugging
-window.__paint = { orbit, chairPhys, enterPaint, leavePaint, painter, world, camera, renderer, uploadPaint, ui, get mode() { return mode; }, get deskMode() { return deskMode; } };
+window.__paint = { viewPainting, leaveView, showOnEasel, showLive, get onEasel() { return onEasel; }, orbit, chairPhys, enterPaint, leavePaint, painter, world, camera, renderer, uploadPaint, ui, get mode() { return mode; }, get deskMode() { return deskMode; } };

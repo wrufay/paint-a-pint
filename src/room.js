@@ -366,6 +366,8 @@ export function buildRoom(scene) {
     else { tex.repeat.set(1, ta / fa); tex.offset.set(0, (1 - ta / fa) / 2); }
     slot.art.material.map = tex; slot.art.material.color.set(0xffffff); slot.art.material.needsUpdate = true;
     slot.filled = true;
+    slot.canvas = canvas;   // the whole painting, uncropped, so it can be shown on the easel (main.js)
+    slot.easelTex = null;
     return slot;
   }
 
