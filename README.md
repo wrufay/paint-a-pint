@@ -29,6 +29,8 @@ I aimed to solve this through making the act of painting digital, without having
 - Vite 8
 - HTML, CSS, JavaScript
 - Three.js with WebGL
+- Deployed on Vercel
+- Cloudflare DNS
 
 ## Local setup
 
