@@ -1,4 +1,4 @@
-// Renders each brush shape (flat, filbert, round) as strokes at light and firm pressure plus single dabs, and times them.
+// Renders each brush shape (flat, filbert, round, knife) as strokes at light and firm pressure plus single dabs, and times them.
 //   node tools/brush-shapes.mjs [out.png]
 import { writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
@@ -6,10 +6,10 @@ import { PaintEngine, hexToLinear } from '../src/brush/engine.js';
 import { paintByName } from '../src/brush/paints.js';
 
 const out = process.argv[2] || 'brush-shapes.png';
-const W = 900, H = 560;
+const shapes = ['flat', 'filbert', 'round', 'knife'];
+const W = 900, H = 40 + shapes.length * 175;
 const eng = new PaintEngine({ width: W, height: H, seed: 5 });
 const p = paintByName("king's blue"), red = paintByName('naphthol red medium');
-const shapes = ['flat', 'filbert', 'round'];
 const timing = [];
 shapes.forEach((shape, row) => {
   eng.setParams({ shape });

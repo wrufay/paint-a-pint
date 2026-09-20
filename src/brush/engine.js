@@ -17,7 +17,8 @@ import { mixPigment, PIGMENT } from './pigment.js';
 import { OPACITY } from './paints.js';
 
 export const DEFAULTS = {
-  shape: 'flat',       // 'flat' (a row of bristles), 'filbert' (oval: light pressure paints a narrow rounded mark), 'round' (a disc: a click makes a round dab)
+  shape: 'flat',       // 'flat' (a row of bristles), 'filbert' (oval: light pressure paints a narrow rounded mark), 'round' (a disc: a click makes a round dab),
+                       // 'knife' (a solid straight blade: drags paint into flat planes with a raised edge)
   size: 46,            // brush width in canvas px
   bristles: 34,        // bristles across the brush
   load: 1.0,           // paint on each bristle at the start of a stroke
@@ -92,6 +93,8 @@ export class PaintEngine {
     this.water = new Float32Array(n);    // water in the wet layer
     this.film = new Float32Array(n);     // dried paint underneath
     this.ground = new Float32Array(n);
+    this.owner = new Uint32Array(n);     // id of the last stroke that laid paint here: a bristle doesn't pick up its own trail
+    this._strokeId = 0;
     this.scratchH = new Float32Array(n);
     this.rgba = new Uint8ClampedArray(n * 4);
     this.TX = Math.ceil(width / TILE); this.TY = Math.ceil(height / TILE);
@@ -186,13 +189,15 @@ export class PaintEngine {
       Math.max(0, colorLinear[2] * l * (1 + (r() - 0.5) * j)),
     ];
     const N = Math.max(4, P.bristles | 0), bristles = [];
-    const shape = P.shape === 'round' || P.shape === 'filbert' ? P.shape : 'flat';
-    const t = P.bristleTint;
-    const mk = (ox, oy, rad, ctc) => {
-      const load0 = P.load * (0.7 + r() * 0.6);
+    const shape = P.shape === 'round' || P.shape === 'filbert' || P.shape === 'knife' ? P.shape : 'flat';
+    const knife = shape === 'knife';
+    const t = P.bristleTint * (knife ? 0.25 : 1);   // a blade carries one smooth slab of paint, not a row of separate tufts
+    const mk = (ox, oy, rad, ctc, pk = 1) => {
+      const load0 = P.load * (knife ? 0.9 + r() * 0.2 : 0.7 + r() * 0.6);
       bristles.push({
         ox, oy, rad: rad * (0.85 + r() * 0.3), stiff: 0.72 + r() * 0.28, ctc,     // ctc: how much pressure it needs to touch
         load0, load: load0,
+        pk,          // how much of the shove this bristle takes part in (a blade shoves only at its ends)
         use: (REF_RAD / rad) ** 2,   // a fatter bristle touches more pixels, but it also holds more paint: same distance per load
         c0: base[0] * (1 + (r() - 0.5) * t), c1: base[1] * (1 + (r() - 0.5) * t), c2: base[2] * (1 + (r() - 0.5) * t),
       });
@@ -206,6 +211,14 @@ export class PaintEngine {
       for (let i = 0; i < M; i++) {
         const rr = Math.sqrt((i + 0.5) / M) * R, a = i * golden, e = (rr / R) * (rr / R);
         mk(Math.cos(a) * rr, Math.sin(a) * rr, bristleR, Math.min(1, r() * 0.35 + e * 0.75));
+      }
+    } else if (knife) {
+      // a dense straight row, no gaps and no jitter: the blade is one edge. It always touches across its whole width.
+      const M = Math.max(10, Math.ceil(P.size / 1.8));
+      bristleR = Math.max(1.2, Math.min(2.4, (P.size / M) * 0.8));
+      for (let i = 0; i < M; i++) {
+        const u = ((i + 0.5) / M - 0.5) * 2;                          // -1 .. 1 across the blade
+        mk(u * P.size / 2, 0, bristleR, r() * 0.08, smooth01((Math.abs(u) - 0.8) / 0.2));
       }
     } else {
       bristleR = Math.min(3.2, Math.max(0.9, (P.size / N) * 0.95));
@@ -224,12 +237,13 @@ export class PaintEngine {
     }
     this.stroke = {
       bristles, px: x, py: y, sx: x, sy: y, moved: 0, pressure,
+      knife, id: ++this._strokeId,
       opacity: paint ? OPACITY[paint.opacity] ?? 1 : 1, strength: paint?.strength ?? 1,
       axis: [Math.cos(2 * (P.fixedAngle * Math.PI / 180)), Math.sin(2 * (P.fixedAngle * Math.PI / 180))], // doubled-angle state
       started: false,
       step: 1,   // pixels of travel per deposit, and the weight each deposit carries
     };
-    this._deposit(x, y, pressure, this.stroke.axis, 0, 0);
+    if (!knife) this._deposit(x, y, pressure, this.stroke.axis, 0, 0);   // a blade has no dab: it would stamp at the wrong angle before it turns
     // fat bristles overlap heavily, so deposit every couple of pixels (each carrying that much more paint) instead of every one
     this.stroke.step = shape === 'round' ? Math.max(1, Math.round(bristleR * 0.7)) : 1;
   }
@@ -263,15 +277,17 @@ export class PaintEngine {
 
   // (ux, uy) is the unit direction of travel; (0, 0) means no travel yet, so nothing is pushed.
   _deposit(cx, cy, pressure, axis, ux, uy) {
-    const { W, H, color, height, water, film, ground } = this, P = this.params, s = this.stroke;
+    const { W, H, color, height, water, film, ground, owner } = this, P = this.params, s = this.stroke, sid = s.id;
     const wm = P.waterMix, transp = Math.pow(Math.min(1, (1 - wm) / (1 - F_FRESH)), 0.8); // thinned paint is see-through
     const a = Math.atan2(axis[1], axis[0]) / 2, ca = Math.cos(a), sa = Math.sin(a);
     const press = Math.min(1, Math.max(0.05, pressure));
-    const spread = 0.55 + 0.6 * press;               // harder press splays the row wider
+    const K = s.knife;                                // a blade doesn't splay, doesn't skip on the weave, and shoves hard
+    const spread = K ? 1 : 0.55 + 0.6 * press;       // harder press splays the row wider
+    const dryP = K ? P.dry * 0.2 : P.dry, tackP = K ? P.tack * 0.3 : P.tack, pushP = K ? Math.min(0.9, P.push * 2.5) : P.push;
     const tmp = [0, 0, 0];
     const w = s.step;                                 // a deposit stands in for `w` pixels of travel
     const sx = -uy, sy = ux;                          // across the direction of travel: paint is shoved this way
-    const pushing = P.push > 0 && (ux !== 0 || uy !== 0);
+    const pushing = pushP > 0 && (ux !== 0 || uy !== 0);
     let np = 0;                                       // queued shoves, applied after every bristle has been through
     let x0 = W, y0 = H, x1 = 0, y1 = 0;
 
@@ -280,9 +296,9 @@ export class PaintEngine {
       if (contact <= 0 || b.load <= 0) continue;
       const bx = cx + (ca * b.ox - sa * b.oy) * spread;
       const by = cy + (sa * b.ox + ca * b.oy) * spread;
-      const r = b.rad * (0.8 + 0.5 * press), R = Math.ceil(r);
+      const r = K ? b.rad : b.rad * (0.8 + 0.5 * press), R = Math.ceil(r);
       const loadFrac = b.load / b.load0;
-      const dryT = Math.min(1, Math.max(0, P.dry * (1.15 - loadFrac)));   // 0 fresh .. 1 dry
+      const dryT = Math.min(1, Math.max(0, dryP * (1.15 - loadFrac)));   // 0 fresh .. 1 dry
       const ix = Math.round(bx), iy = Math.round(by);
 
       for (let yy = iy - R; yy <= iy + R; yy++) {
@@ -300,14 +316,14 @@ export class PaintEngine {
 
           // dry brush: weave peaks catch paint, valleys are skipped as the bristle empties.
           // Half-dry paint drags: the same skipping, so it breaks up instead of blending.
-          const reach = contact - dryT * (1 - ground[i]) * 1.3 - dryT * 0.15 - tacky * P.tack * (0.25 + 0.75 * (1 - ground[i]));
+          const reach = contact - dryT * (1 - ground[i]) * 1.3 - dryT * 0.15 - tacky * tackP * (0.25 + 0.75 * (1 - ground[i]));
           if (reach <= 0) continue;
           const amt = Math.min(1, reach * 1.4) * fall;
 
           // shove: open paint under the bristle is pushed sideways to just outside it (a groove here, a ridge there)
           if (pushing && wk > 0.05 && tw > 1e-4 && np < PUSH_MAX) {
             const across = (xx - bx) * sx + (yy - by) * sy;
-            const f = 1 - Math.pow(1 - Math.min(0.5, P.push * wk * contact * fall), w);
+            const f = 1 - Math.pow(1 - Math.min(0.5, pushP * b.pk * wk * contact * fall), w);
             const d = (across >= 0 ? 1 : -1) * (r + 0.9);
             const fx = bx + sx * d, fy = by + sy * d, tx = Math.floor(fx), ty = Math.floor(fy), ax = fx - tx, ay = fy - ty;
             if (tx >= 0 && tx < W - 1 && ty >= 0 && ty < H - 1 && f > 0.002 && np + 4 <= PUSH_MAX) {
@@ -326,7 +342,7 @@ export class PaintEngine {
           // bristle drags open paint from the canvas into its own colour
           // (only from pixels that actually hold wet paint, not bare gesso, or the bristle bleaches itself)
           const present = Math.min(1, tw * 8);
-          if (wk > 0.02 && present > 0.05 && P.pickup > 0) {
+          if (wk > 0.02 && present > 0.05 && P.pickup > 0 && owner[i] !== sid) {   // (paint this stroke laid is the bristle's own: nothing new to pick up)
             let t = 1 - Math.pow(1 - Math.min(0.5, P.pickup * wk * present * amt * (1.4 - loadFrac)), w);
             // a pixel that still looks like bare canvas holds no pigment worth dragging: without this the bristles
             // bleach themselves on thin, gesso-tinted paint and go on laying gesso-coloured ridges
@@ -350,10 +366,11 @@ export class PaintEngine {
 
           // new paint arrives as solids + water, so its thickness is the same as before but it now has to dry
           const room = Math.max(0, 1.6 - film[i] - tw);
-          const laid = Math.min(room, amt * w * P.heightGain * (0.35 + 0.65 * Math.min(1, loadFrac)));
+          const laid = Math.min(room, amt * w * P.heightGain * (K ? 1.4 : 1) * (0.35 + 0.65 * Math.min(1, loadFrac)));
+          owner[i] = sid;
           height[i] = s0 + laid * (1 - wm);
           water[i] = w0 + laid * wm;
-          b.load -= P.consumption * b.use * amt * w;
+          b.load -= P.consumption * b.use * (K ? 0.12 : 1) * amt * w;
 
           if (xx < x0) x0 = xx; if (xx > x1) x1 = xx; if (yy < y0) y0 = yy; if (yy > y1) y1 = yy;
         }
