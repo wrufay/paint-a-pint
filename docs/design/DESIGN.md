@@ -133,6 +133,25 @@ Still hard-coded, deliberately or not yet:
 
 New UI CSS should use the tokens; do not add new palette hexes to the pages.
 
+## Paint card layout
+
+The card should read as one intentional object, not a stack of buttons. Top to bottom:
+
+1. `PAINT` heading, then the 9 swatches.
+2. `size` slider.
+3. **Brush shape** (flat, filbert, round): a `.card-tools` row. The active shape is `.btn.sel` (ink fill, cream text).
+4. **Lay it flat / stand it up**: a full-width `.btn.block`.
+5. A dashed rule, then the **secondary toolbar**: one `.card-tools.ruled` grid holding undo, clear, dry now, wetness, save png, settings. Three columns, so two rows of three. Toggles (wetness, settings) use `.btn.sel` while on.
+6. **Hang it up & go back**, the only `.btn.primary`, always last so it stays the obvious way out.
+7. The `esc` hint.
+
+Rules:
+- Short lowercase text labels, no icons: the design system has no icon style. The longest label is `settings`; keep labels around 8 characters or the 3-column grid will clip them.
+- The card is 236px wide. At 212px, `dry now` and `save png` wrapped onto two lines; at 236px all labels fit on one. Toolbar buttons are `white-space: nowrap`.
+- Use the classes above, not inline `style` spacing. New card styles go in `index.html` (or tokens in `tokens.css`), not in JS.
+- Use `.btn.sel` for any toggled state; do not invent a new one.
+- The wetness legend (`blue = still workable ...`) stays a small `--ink-soft` line that only shows while wetness is on.
+
 ## Working agreement
 
 - Add to this file when a decision is made. Do not leave decisions only in chat.
