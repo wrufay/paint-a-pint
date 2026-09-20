@@ -135,46 +135,52 @@ export function initAcrylicUI(painter, { onBack, view, isPainting = () => true }
   document.getElementById('clear').onclick = () => painter.clear();
   document.getElementById('back').onclick = onBack;
 
-  // brush shape: flat, filbert (oval) or round (also gives single dabs)
+  // The card, top to bottom: paints, size, brush shape, lay flat / stand up, a secondary toolbar, hang it up. The classes
+  // (card-tools, ruled, block) and the layout are the design session's (docs/design/DESIGN.md, "Paint card layout").
+
+  // brush shape: flat, filbert (oval), round (also gives single dabs) or knife (flat planes, raised edges)
   const shapes = document.createElement('div');
-  shapes.className = 'tools'; shapes.style.cssText = 'margin:8px 0;';   // gap above and below: the row under it (undo, dry now) has none of its own
+  shapes.className = 'card-tools four';
   const shapeBtns = {};
   const syncShape = () => { for (const k in shapeBtns) shapeBtns[k].classList.toggle('sel', painter.engine.params.shape === k); };
-  for (const k of ['flat', 'filbert', 'round']) {
+  for (const k of ['flat', 'filbert', 'round', 'knife']) {
     const b = document.createElement('button');
-    b.className = 'btn'; b.textContent = k; b.style.cssText = 'padding-left:2px;padding-right:2px;font-size:var(--text-xs);letter-spacing:0;';
-    b.title = { flat: 'flat brush: a row of bristles', filbert: 'filbert: an oval tip, width follows pressure', round: 'round brush: click for a dab' }[k];
+    b.className = 'btn'; b.textContent = k;
+    b.title = { flat: 'flat brush: a row of bristles', filbert: 'filbert: an oval tip, width follows pressure', round: 'round brush: click for a dab', knife: 'palette knife: drags paint into flat planes with a raised edge' }[k];
     b.onclick = () => { painter.engine.params.shape = k; saveParams(painter.engine.params); syncShape(); };
     shapeBtns[k] = b; shapes.appendChild(b);
   }
   syncShape();
   size.parentNode.after(shapes);
 
-  // settings / wetness / save: built here (not in index.html) so the card layout stays the design session's call
-  const extra = document.createElement('div');
-  extra.className = 'tools'; extra.style.cssText = 'margin-top:8px;flex-wrap:wrap;';   // two rows: settings + wetness, then save png
-  const mk = (label, onclick, wide) => { const b = document.createElement('button'); b.className = 'btn'; b.textContent = label; b.onclick = onclick; b.style.flex = wide ? '1 1 100%' : '1 1 calc(50% - 4px)'; extra.appendChild(b); return b; };
-  const panel = buildTunePanel(painter.engine.params, DEFAULTS, { onChange: () => { size.value = painter.size; updateCursor(); } });
-  document.getElementById('paint').appendChild(panel);
-  const settingsBtn = mk('settings', () => { const on = panel.style.display === 'none'; panel.style.display = on ? 'block' : 'none'; settingsBtn.classList.toggle('sel', on); if (on) panel.refresh(); });
-  let wet = false;
-  const wetBtn = mk('wetness', () => { wet = !wet; painter.setWetnessView(wet); wetBtn.classList.toggle('sel', wet); wetHint.style.display = wet ? 'block' : 'none'; });
-  mk('save png', () => painter.savePng(), true);
-  const wetHint = document.createElement('p');
-  wetHint.textContent = 'blue = still workable · orange = getting tacky · no tint = dry';
-  wetHint.style.cssText = 'display:none;margin:8px 0 0;font-size:var(--text-xs);color:var(--ink-soft);text-align:center;';
   // easel or desk: put the canvas down flat for a bird's-eye view, and stand it back up
   let viewBtn = null;
   if (view) {
     viewBtn = document.createElement('button');
-    viewBtn.className = 'btn'; viewBtn.style.marginTop = '8px';
+    viewBtn.className = 'btn block';
     const syncView = () => { viewBtn.textContent = view.down ? 'stand it up' : 'lay it flat'; };
     viewBtn.onclick = () => view.set(!view.down);
     view.onChange = syncView; syncView();
+    shapes.after(viewBtn);
   }
+
+  // secondary toolbar: undo, clear and dry now already exist in index.html, so they are moved here, not recreated
+  const toolbar = document.createElement('div');
+  toolbar.className = 'card-tools ruled';
+  (viewBtn || shapes).after(toolbar);
+  const mk = (label, onclick) => { const b = document.createElement('button'); b.className = 'btn'; b.textContent = label; b.onclick = onclick; toolbar.appendChild(b); return b; };
+  toolbar.append(document.getElementById('undo'), document.getElementById('clear'), document.getElementById('dry'));
+  const panel = buildTunePanel(painter.engine.params, DEFAULTS, { onChange: () => { size.value = painter.size; updateCursor(); } });
+  document.getElementById('paint').appendChild(panel);
+  let wet = false;
+  const wetBtn = mk('wetness', () => { wet = !wet; painter.setWetnessView(wet); wetBtn.classList.toggle('sel', wet); wetHint.style.display = wet ? 'block' : 'none'; });
+  mk('save png', () => painter.savePng());
+  const settingsBtn = mk('settings', () => { const on = panel.style.display === 'none'; panel.style.display = on ? 'block' : 'none'; settingsBtn.classList.toggle('sel', on); if (on) panel.refresh(); });
+  const wetHint = document.createElement('p');
+  wetHint.textContent = 'blue = still workable · orange = getting tacky · no tint = dry';
+  wetHint.style.cssText = 'display:none;margin:0 0 12px;font-size:var(--text-xs);color:var(--ink-soft);text-align:center;';
   const back = document.getElementById('back');
-  if (viewBtn) back.parentNode.insertBefore(viewBtn, back);
-  back.parentNode.insertBefore(extra, back); back.parentNode.insertBefore(wetHint, back);
+  back.parentNode.insertBefore(wetHint, back);
 
   const esc = document.getElementById('esc'); if (esc) esc.textContent = 'esc: back to the room, painting stays on the easel';
   sync();
