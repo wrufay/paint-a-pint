@@ -10,9 +10,12 @@ import { AcrylicPainter, initAcrylicUI } from './acrylic-painter.js';
 const BG = 0x1c1915;
 const app = document.getElementById('app');
 
+// Touch devices (the iPad) get a cheaper picture: fewer pixels, less MSAA, a smaller shadow map.
+const coarse = matchMedia('(pointer: coarse)').matches;
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, coarse ? 1.5 : 2));
 renderer.shadowMap.enabled = true;
+renderer.shadowMap.autoUpdate = false;   // the shadow map is big; it is redrawn only when something that casts a shadow moves (shadowWake)
 renderer.shadowMap.type = THREE.PCFShadowMap; // r18x folds PCFSoft into PCF; softness comes from light.shadow.radius
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
@@ -28,7 +31,7 @@ HOME.pos = new THREE.Vector3(12.3, 9.3, 12.8).add(HOME.target).sub(new THREE.Vec
 camera.position.copy(HOME.pos); camera.lookAt(HOME.target);
 
 // ── post: bloom → vignette/grade → tone map ──────────────────────────────────
-const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 }));
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: coarse ? 2 : 4 }));
 composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.38, 0.5, 1.0);
 composer.addPass(bloom);
@@ -50,6 +53,7 @@ composer.addPass(new OutputPass());
 
 // ── world ────────────────────────────────────────────────────────────────────
 const world = buildRoom(scene);
+if (coarse) world.sun.shadow.mapSize.set(2048, 2048);
 const painter = new AcrylicPainter(document.getElementById('paint-canvas'), document.getElementById('grain'));
 // the easel shows the live painting canvas, so paint keeps drying (and showing it) while you look around the room
 // (unlit colour + a normal map from the paint's height, so ridges catch the room's light)
@@ -75,8 +79,15 @@ const mouse = new THREE.Vector2(0, 0), mouseSm = new THREE.Vector2(0, 0);
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 let tween = null;
 
+// The 3D room is drawn on demand. While you paint, the scene behind the paper is static and hidden by it, so drawing it
+// every frame is wasted GPU (heat on the laptop, slowness on the iPad). A frame is drawn only while `wake` > 0, and
+// anything that changes what you see pokes it. `shadowWake` does the same for the shadow map.
+let wake = 6, shadowWake = 6;
+const poke = (n = 3) => { if (n > wake) wake = n; };
+
 function resize() {
   const w = innerWidth, h = innerHeight;
+  poke(6);
   renderer.setSize(w, h);
   composer.setSize(w, h);
   bloom.resolution.set(w, h);
@@ -149,6 +160,7 @@ function enterPaint() {
     document.body.classList.remove('travelling'); document.body.classList.add('painting');
     layoutPaper();
     paintEl.classList.add('on');
+    poke(6);
   });
 }
 
@@ -169,6 +181,7 @@ const view = {
       document.body.classList.remove('travelling');
       layoutPaper();
       paintEl.classList.add('on');
+      poke(6);
     }, { from, to, legs: !down });
   },
 };
@@ -203,7 +216,7 @@ const ray = new THREE.Raycaster();
 let hovering = false, downAt = null;
 function hover(on) {
   if (on === hovering) return;
-  hovering = on;
+  hovering = on; poke();
   renderer.domElement.style.cursor = on ? 'pointer' : '';
   world.canvasMat.emissive.setRGB(on ? 0.16 : 0, on ? 0.12 : 0, on ? 0.05 : 0);
   document.getElementById('hint').style.transform = on ? 'translateX(-50%) scale(1.06)' : 'translateX(-50%)';
@@ -226,8 +239,10 @@ let texT = 0;
 const sph = new THREE.Spherical(), off = new THREE.Vector3(), tmp = new THREE.Vector3();
 function frame(now) {
   requestAnimationFrame(frame);
+  let moving = false;   // the camera, the easel or a hung frame is moving, so shadows need redrawing too
 
   if (tween) {
+    moving = true;
     const k = ease(Math.min(1, (now - tween.t0) / tween.dur));
     camera.position.lerpVectors(tween.from.pos, tween.to.pos, k);
     camera.quaternion.slerpQuaternions(tween.from.quat, tween.to.quat, k);
@@ -243,26 +258,36 @@ function frame(now) {
   } else if (mode === 'room') {
     // gentle limited parallax orbit around the diorama
     mouseSm.lerp(mouse, 0.05);
-    off.subVectors(HOME.pos, HOME.target); sph.setFromVector3(off);
-    sph.theta += -mouseSm.x * 0.12; sph.phi += mouseSm.y * 0.05;
-    tmp.setFromSpherical(sph).add(HOME.target);
-    camera.position.copy(tmp); camera.lookAt(HOME.target);
-    camera.fov = HOME.fov; camera.updateProjectionMatrix();
+    const drifting = mouseSm.distanceToSquared(mouse) > 2e-6;   // still catching up with the pointer
+    if (drifting || wake > 0) {
+      off.subVectors(HOME.pos, HOME.target); sph.setFromVector3(off);
+      sph.theta += -mouseSm.x * 0.12; sph.phi += mouseSm.y * 0.05;
+      tmp.setFromSpherical(sph).add(HOME.target);
+      camera.position.copy(tmp); camera.lookAt(HOME.target);
+      camera.fov = HOME.fov; camera.updateProjectionMatrix();
+      if (drifting) poke(2);
+    }
   }
 
   painter.tick(now);
   // the 3D easel only needs the new pixels when it can be seen (the paint overlay hides it), and not every frame
-  if (mode !== 'paint' && painter.changed && now - texT > 100) { uploadPaint(); painter.changed = false; texT = now; }
+  if (mode !== 'paint' && painter.changed && now - texT > 100) { uploadPaint(); painter.changed = false; texT = now; poke(2); }
 
   for (const f of world.frames) { // little pop when a painting lands on the wall
     if (f.popT < 0) continue;
+    moving = true;
     const t = Math.min(1, (now - f.popT) / 600);
     const s = t < 1 ? 1 + Math.sin(t * Math.PI) * 0.16 * (1 - t) : 1;
     f.group.scale.setScalar(s);
     if (t >= 1) f.popT = -1;
   }
 
-  composer.render();
+  if (moving) { poke(2); shadowWake = 2; }
+  if (wake > 0) {
+    if (shadowWake > 0) { renderer.shadowMap.needsUpdate = true; shadowWake--; }
+    composer.render();
+    wake--;
+  }
 }
 
 addEventListener('resize', resize);
@@ -270,4 +295,4 @@ resize();
 requestAnimationFrame(frame);
 
 // tiny hook for automated screenshots / debugging
-window.__paint = { enterPaint, leavePaint, painter, world, camera, uploadPaint, get mode() { return mode; } };
+window.__paint = { enterPaint, leavePaint, painter, world, camera, renderer, uploadPaint, get mode() { return mode; } };
