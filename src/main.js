@@ -59,7 +59,8 @@ Promise.all([document.fonts.load('500 20px "DM Sans"'), document.fonts.load('700
   .then(() => {
     world.props = addPaintProps(world.room);
     ui.onSelect = (p) => { world.props.select(p.id); poke(4); shadowWake = 3; };   // the chosen paint's tube lifts off the pile
-    world.props.select(painter.paint.id);
+    ui.onShape = (sh) => { world.props.selectShape(sh); poke(4); shadowWake = 3; };
+    world.props.select(painter.paint.id); world.props.selectShape(painter.engine.params.shape);
     poke(6); shadowWake = 6;
   });
 if (coarse) world.sun.shadow.mapSize.set(2048, 2048);

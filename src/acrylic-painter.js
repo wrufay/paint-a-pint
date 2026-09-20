@@ -122,7 +122,7 @@ export function initAcrylicUI(painter, { onBack, view, isPainting = () => true }
   const swatches = document.getElementById('swatches');
   const size = document.getElementById('size');
 
-  const ui = { choose: null, setShape: null, onSelect: null };   // what the 3D props in the room use to drive the card
+  const ui = { choose: null, setShape: null, onSelect: null, onShape: null };   // what the 3D props in the room use to drive the card
   let chipEl = null;   // the palette's "brush colour" chip
   const cssColour = (rgb) => '#' + rgb.map((v) => Math.round(Math.min(1, linearToSrgb(Math.max(0, v))) * 255).toString(16).padStart(2, '0')).join('');
   const sync = () => {
@@ -151,7 +151,7 @@ export function initAcrylicUI(painter, { onBack, view, isPainting = () => true }
   const shapes = document.createElement('div');
   shapes.className = 'card-tools four';
   const shapeBtns = {};
-  const syncShape = () => { for (const k in shapeBtns) shapeBtns[k].classList.toggle('sel', painter.engine.params.shape === k); };
+  const syncShape = () => { for (const k in shapeBtns) shapeBtns[k].classList.toggle('sel', painter.engine.params.shape === k); if (ui.onShape) ui.onShape(painter.engine.params.shape); };
   for (const k of ['flat', 'filbert', 'round', 'knife']) {
     const b = document.createElement('button');
     b.className = 'btn'; b.textContent = k;

@@ -191,7 +191,7 @@ export function addPaintProps(room) {
     const b = makeBrush(shape, colour);
     b.position.set(-0.03 + i * 0.03, 0.03, -0.01 + (i - 1) * 0.012);
     b.rotation.set(tiltX, i * 1.1, -tiltZ);                               // lean them against the rim
-    b.userData.shape = shape;
+    b.userData.shape = shape; b.userData.baseY = b.position.y;
     jar.add(b); out.brushes.push(b);
   });
   out.jar = jar;
@@ -204,6 +204,7 @@ export function addPaintProps(room) {
   out.select = (paintId) => {
     for (const t of out.tubes) t.position.y = t.userData.baseY + (t.userData.paint.id === paintId ? 0.035 : 0);
   };
+  out.selectShape = (shape) => { for (const b of out.brushes) b.position.y = b.userData.baseY + (b.userData.shape === shape ? 0.07 : 0); };   // the chosen brush sits higher in the jar
   const glow = (obj, on) => obj.traverse((m) => { if (m.material && m.material.emissive) m.material.emissive.setRGB(on ? 0.16 : 0, on ? 0.12 : 0, on ? 0.05 : 0); });
   let lit = null;
   out.hover = (obj) => { if (obj === lit) return; if (lit) glow(lit, false); lit = obj; if (lit) glow(lit, true); };
