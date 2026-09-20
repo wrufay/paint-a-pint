@@ -35,7 +35,9 @@ Sizes: `--text-xs` 11, `--text-sm` 12, `--text-base` 14, `--text-lg` 18, `--text
 
 Applied in the UI files: every `font-size` is a `--text-*` token, bold and regular use `--weight-*`, and chip and button tracking use `--tracking-caps` and `--tracking-btn`. Off-scale sizes were snapped to the scale: 10.5px to 11px, the 13px title to 12px, 18-20px headings to 18px. `--text-base`, `--text-xl` and `--text-display` are unused so far because the room UI has no body copy or big titles yet.
 
-Not on tokens yet: a few one-off `letter-spacing` values (`.03em` to `.08em`) and all border radii. The radii disagree with the spec, which says buttons are pills: `index.html` buttons are 6px rectangles with a 2px ink border, while `lab.html` buttons are pills. Decide which one wins before wiring `--radius-*`.
+Shape follows the spec: buttons are pills (`--radius-pill`) with the `--border-btn` outline, and note cards and panels use `--radius-card` (10px). Circles (swatches, cursor) are left as `50%`. `--radius-chip` (3px) is unused because there are no chips in the app yet.
+
+Not on tokens yet: a few one-off `letter-spacing` values (`.03em` to `.08em`).
 
 ### Canvas / Three.js text
 
