@@ -20,7 +20,7 @@ Click the easel. The camera moves in and a card appears with the paints.
 | | |
 |---|---|
 | paint | click a colour, or press **1**-**9** (card order) |
-| brush | flat, filbert (oval, width follows pressure) or round (click for a dab) |
+| brush | flat, filbert (oval, width follows pressure), round (click for a dab) or palette knife (flat planes with a raised edge) |
 | size | the slider, or **[** and **]** |
 | undo | **z** (one level) |
 | wetness view | **w**: blue = still workable, orange = getting tacky, no tint = dry |

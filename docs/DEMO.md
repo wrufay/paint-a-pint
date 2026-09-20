@@ -17,7 +17,7 @@ Judging is a live demo (originality, UX, technical complexity, WOW), so the demo
 
 **0:30 - it's wet, then it isn't (15 s).** Press **w**: blue tint = still workable, orange = getting tacky, none = dry. Say: *"Every stroke has open time. Watch."* Press **w** to turn it off, then hit **dry now**. Say: *"Now it's dry."* Press **7** (burnt sienna) and paint a stroke across the dry green: it **covers** it and does not blend. That is wet-on-dry.
 
-**0:45 - texture (10 s).** Pick the **round** brush and tap a few dabs for texture. Switch to **filbert** and press lightly, then firmly: the width follows pressure. Point at the ridges the bristles leave in thick paint.
+**0:45 - texture (10 s).** Pick the **round** brush and tap a few dabs for texture. Switch to **filbert** and press lightly, then firmly: the width follows pressure. Point at the ridges the bristles leave in thick paint. Pick the **knife** and lay a flat slab of paint, like the impasto skies in the reference painting.
 
 **0:55 - the room (15 s).** Click **lay it flat**: the canvas goes down on the desk and the camera goes bird's-eye, like painting at a real desk. Say: *"And the paint is lit by the room, so thickness reads as thickness."* Click **stand it up** if you want the easel view again.
 
