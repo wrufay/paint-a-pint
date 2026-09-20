@@ -159,7 +159,7 @@ Shown once, right after the camera arrives at the desk, and again from the `?` i
 - **Look:** the app's `.note` card (cream, dashed pink border, tape) over the room, dimmed with `--backdrop` at 64%. Heading in Young Serif (`--text-xl`, ultramarine). Three numbered steps: Young Serif numerals in ultramarine, a bold `--text-lg` step name, `--text-base` body. One terracotta `.btn.primary`, "start painting".
 - **Three steps, no more:** pick a paint, drag to paint, hang it up. Lowercase, short, in the app's voice.
 - **Key hints:** shortcuts are `<kbd>` pills (pill outline, white fill, `--text-xs` bold) inside `.kb` spans, and `.kb` is hidden under `@media (hover: none)`, so touch devices (the iPad) never read "press" with no keyboard. Every step must still read completely without its `.kb` part.
-- **Behaviour:** remembered in `localStorage` (`paint-a-pint:howto-seen`). Closes with the button, a tap outside, or `esc`; `esc` is intercepted so it does not also leave paint mode. `?howto` in the URL shows it every time, for testing.
+- **Behaviour:** remembered in `localStorage` (`paint-a-pint:howto-seen`). Closes with the button, a tap outside, or `esc`; `esc` is intercepted so it does not also leave paint mode. `?howto` in the URL shows it every time, for testing. It fades in (0.28s) and out (0.22s); with `prefers-reduced-motion` there is no animation and it hides at once.
 - **Wiring:** it waits for `body.painting`, which `main.js` adds at the end of the fly-in. If that class is renamed, update `src/howto.js`. Markup and CSS are in `index.html`; logic is in `src/howto.js`.
 
 ## Working agreement
