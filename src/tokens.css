@@ -6,16 +6,28 @@
  */
 
 :root {
-  /* ---- colour: PROVISIONAL, lifted from the existing pages; revisit in the colour pass ---- */
-  --cream: #fbf7ee;
+  /* ---- colour: 14 tokens, decided. Roles and contrast rules live in DESIGN.md ---- */
+  /* surfaces (light) */
+  --cream: #fbf7ee;       /* cards, chips */
+  --paper: #f6efdd;       /* canvas / sheet surface */
+  --butter: #ecdcaa;      /* highlight, lamp glow */
+
+  /* ink (text on light) */
+  --ink: #4a3b34;
+  --ink-soft: #756558;    /* secondary text, 5.2:1 on cream */
+
+  /* dark surfaces and text on dark */
+  --backdrop: #1c1915;    /* room page background */
+  --backdrop-lab: #2b2622;/* lab page background */
+  --dusk: #404070;        /* night surface (no pink text on it) */
+  --muted-on-dark: #cdbfae;
+
+  /* accents: pink, green and sky are fills only on light; terracotta and ultramarine may be text */
   --pink: #e58a8a;
   --green: #5fa88c;
-  --ink: #4a3b34;
-
-  --paper: #f6efdd;       /* canvas / sheet surface (index.html) */
-  --backdrop: #1c1915;    /* room page background (index.html) */
-  --backdrop-lab: #2b2622;/* lab page background (lab.html) */
-  --muted-on-dark: #cdbfae;
+  --sky: #68a0d1;
+  --terracotta: #954a33;  /* primary action on light */
+  --ultramarine: #335295; /* coloured text and links on light */
 
   /* ---- type: families ---- */
   --font-display: "Young Serif", Georgia, "Times New Roman", serif;
@@ -49,5 +61,7 @@
   /* ---- taped-paper chip ---- */
   --chip-bg: #fff8e8;
   --chip-tilt: -2deg;
-  --tape-pink: rgba(229, 138, 138, 0.65);
+  --tape-pink: rgba(229, 138, 138, 0.65); /* tape may be pink, green or sky: free choice, no meaning */
+  --tape-green: rgba(95, 168, 140, 0.6);
+  --tape-sky: rgba(104, 160, 209, 0.65);
 }
