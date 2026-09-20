@@ -13,7 +13,7 @@
 //   • Colour mixes as pigment (Kubelka-Munk over a 38-band spectrum), so blue + yellow leans green and white tints.
 //   • Everything is lit from paint height (normal map + a touch of gloss), so thick paint reads as thick.
 
-import { mixPigment } from './pigment.js';
+import { mixPigment, PIGMENT } from './pigment.js';
 import { OPACITY } from './paints.js';
 
 export const DEFAULTS = {
@@ -307,7 +307,8 @@ export class PaintEngine {
           // lay paint down: opaque, less so as the bristle runs empty or the paint is thinned
           const alpha = Math.min(1, amt * P.opacity * s.opacity * transp * (0.6 + 0.4 * Math.min(1, loadFrac * 3)));
           const mixT = alpha * s.strength / (alpha * s.strength + (1 - alpha));   // strong pigments take over a mix faster
-          mix3(tmp, color[c], color[c + 1], color[c + 2], b.c0, b.c1, b.c2, mixT);
+          // over bare canvas or dried paint the old colour is a ground, not a paint: don't let it weigh in like white paint
+          mix3(tmp, color[c], color[c + 1], color[c + 2], b.c0, b.c1, b.c2, mixT, PIGMENT.lumPow * Math.min(1, tw / 0.05));
           // over dried paint there is nothing to mix with: the new paint just covers it
           const cover = Math.min(1, film[i] * 10) * (1 - wk);
           for (let k = 0; k < 3; k++) {

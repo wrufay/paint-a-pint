@@ -31,12 +31,14 @@ let cacheB0 = -1, cacheB1 = -1, cacheB2 = -1;   // the brush side is the same co
 export const PIGMENT = { lumPow: 0.5 };
 
 // out = mix of a and b, t = weight of b. All linear RGB.
-export function mixPigment(out, a0, a1, a2, b0, b1, b2, t) {
+// lumPow overrides PIGMENT.lumPow: pass 0 when `a` is a ground (bare canvas or dried paint) and not a paint, so thin
+// paint over it reads as a clear glaze and not as paint cut with white.
+export function mixPigment(out, a0, a1, a2, b0, b1, b2, t, lumPow = PIGMENT.lumPow) {
   if (t <= 0) { out[0] = a0; out[1] = a1; out[2] = a2; return; }
   if (t >= 1) { out[0] = b0; out[1] = b1; out[2] = b2; return; }
   toKS(ksA, a0, a1, a2);
   if (b0 !== cacheB0 || b1 !== cacheB1 || b2 !== cacheB2) { toKS(ksB, b0, b1, b2); cacheB0 = b0; cacheB1 = b1; cacheB2 = b2; }
-  const p = PIGMENT.lumPow;
+  const p = lumPow;
   const wa = (1 - t) * Math.pow(lum(a0, a1, a2), p), wb = t * Math.pow(lum(b0, b1, b2), p), inv = 1 / (wa + wb);
   let X = 0, Y = 0, Z = 0;
   for (let i = 0; i < N; i++) {
