@@ -4,6 +4,12 @@
 
 Welcome to [Fay's](https://faywu.ca/) solo hack for _[Hack the North '26](https://hackthenorth2026.devpost.com/)_ (๑ᵔ⤙ᵔ๑)
 
+![paint-a-pint cover: the title in red paint on crumpled paper, with a paint bucket of brushes, a dictionary card for "pint", and two taped-on photos of a desk and a small acrylic landscape](docs/assets/cover.png)
+
+![Two polaroids: the 3D room with a desk, easel, window and bed, and the overhead canvas view with paint tubes](docs/assets/screenshots.png)
+
+_app screenshots_
+
 ## What is it?
 
 A digital simulation of the acrylic painting experience.
@@ -45,6 +51,10 @@ Hence, are not true measurements and are not intended to yield exact real-world 
 
 **Paint mixing on the canvas**: My biggest fear for this project was having it end up as a digital art tool with no differentiator, but seeing the painting mix made me feel like I was back on a real canvas.
 
+![A painting made in paint-a-pint, shown on the overhead desk with the paint card on the left, tubes and brushes on the right, and a palette of mixed colours](docs/assets/artwork.png)
+
+_the result - my e7 hacking spot at sunrise. see the painting process [here](https://www.youtube.com/watch?v=0OMz45NClwk&feature=youtu.be)_
+
 ## Layout
 
 |                                            |                                                                                        |
@@ -67,6 +77,8 @@ Regenerate the pigment tables with `node tools/gen-spectral-data.mjs`. The Node 
 Pigment mixing tables come from [Spectral.js](https://github.com/rvanwijnen/spectral.js) by Ronald van Wijnen (MIT), used as a dev dependency to generate `src/brush/spectral-data.js`.
 
 [Windsor & Newton Galeria](https://www.winsornewton.com/en-ca/collections/galeria-acrylic) and [Amsterdam](https://www.royaltalens.com/collections/amsterdam-standard-series-acrylics) acrylics for being the best cost affordable acrylics that carried me through years of silly painting. **Reference images and exact colour codes of paints I own were used to generate the 3D tubes.**
+
+
 
 ## More soon
 
