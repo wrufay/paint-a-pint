@@ -6,6 +6,17 @@ import { PAINTS, PALETTES } from './brush/paints.js';
 
 const DESK_TOP = 1.5;   // desk surface height in room.js
 
+// Where everything sits on the desk for the bird's-eye view (x, z in room units). The canvas lies flat in the middle, the tray
+// of paint to mix on is in front of it, the tubes are to its left and the water jar to its right. main.js and tray3d.js read this.
+export const TABLE = {
+  canvas: { x: 0.45, z: -3.35 },
+  tray: { x: 0.45, z: -2.63 },
+  tubes: { x: -0.49, z: -2.53, dx: 0.118, dz: 0.42 },     // x is the middle column; z is the front end of the front row
+  jar: { x: 1.06, z: -2.74 },
+  glass: { x: 0.9, z: -2.47 },
+  view: { x: 0.35, z: -3.15, width: 2.9, height: 1.65 },  // what the overhead camera has to fit
+};
+
 // The names as printed on the tubes and swatch cards (paints/), in the order they appear there.
 const NAMES = {
   'naphthol-red': ['Naphthol red medium', 'Naftolrood middel', 'Rouge naphtol moyen', 'Naphtholrot mittel', 'Rojo naftol medio', 'Rosso medio naftolo'],
@@ -213,25 +224,21 @@ export function addPaintProps(room) {
   const box = PALETTES['my box'].map((id) => PAINTS.find((p) => p.id === id));
   const out = { tubes: [], jar: null, brushes: [] };
 
-  // The tubes lie in a small pile on the empty desk to the left of the canvas, so they show in the bird's-eye view too (which
-  // only sees about 2.4 units across): five on the desk and four nested on top of them, cap towards the back wall and label up,
-  // so the labels read upright from above. The group's origin is the crimped end of each tube.
-  const pile = new THREE.Group(); pile.position.set(-0.96, DESK_TOP, -2.97); room.add(pile);
-  const bottom = [0, 2, 3, 6, 8], top = [1, 7, 5, 4];                    // indexes into the paint box: the ones you reach for most are on top
-  const put = (idx, x, y, k) => {
-    const tube = makeTube(box[idx]);
-    const wobble = Math.sin((idx + 1) * 12.9898);                         // a little untidiness, deterministic
-    tube.rotation.set(-Math.PI / 2, 0, wobble * 0.07);                    // lay it down: +y (the cap) goes to -z
-    tube.position.set(x, y, wobble * 0.012);
-    tube.userData.baseY = y;
-    pile.add(tube); out.tubes.push(tube);
-  };
-  const gap = 0.09;
-  bottom.forEach((idx, k) => put(idx, (k - 2) * gap, R * 0.98, k));
-  top.forEach((idx, k) => put(idx, (k - 1.5) * gap, R * 0.98 + gap * 0.866, k));
+  // The tubes lie in a 3 x 3 grid on the desk to the left of the canvas, cap end towards you and the crimp towards the back wall,
+  // label up, so from above each label reads upright (see TABLE for where everything sits). Each tube's origin is its front end.
+  const grid = new THREE.Group(); grid.position.set(TABLE.tubes.x, DESK_TOP, TABLE.tubes.z); room.add(grid);
+  box.forEach((paint, i) => {
+    const col = i % 3, row = Math.floor(i / 3);
+    const tube = makeTube(paint);
+    const wobble = Math.sin((i + 1) * 12.9898);                           // a little untidiness, deterministic
+    tube.rotation.set(-Math.PI / 2, 0, wobble * 0.05);                    // lay it down: +y (the far end) goes to -z
+    tube.position.set((col - 1) * TABLE.tubes.dx + wobble * 0.008, R * 0.98, -row * TABLE.tubes.dz);
+    tube.userData.baseY = tube.position.y;
+    grid.add(tube); out.tubes.push(tube);
+  });
 
   // a jar of water with three brushes standing in it, and a clean glass beside it
-  const jar = new THREE.Group(); jar.position.set(1.55, DESK_TOP, -2.95); room.add(jar);
+  const jar = new THREE.Group(); jar.position.set(TABLE.jar.x, DESK_TOP, TABLE.jar.z); room.add(jar);
   jar.add(makeGlass({ radius: 0.085, height: 0.23, water: 0.16, waterColour: 0xb9c8b8, waterOpacity: 0.62 }));
   [['flat', 0xc7402d, -0.32, 0.13], ['filbert', 0x3b7d6b, 0.18, -0.22], ['round', 0xe0b23a, 0.34, 0.16]].forEach(([shape, colour, tiltZ, tiltX], i) => {
     const b = makeBrush(shape, colour);
@@ -242,7 +249,7 @@ export function addPaintProps(room) {
   });
   out.jar = jar;
   const glass = makeGlass({ radius: 0.07, height: 0.19, water: 0.12, waterColour: 0xcfe0e6, waterOpacity: 0.4 });
-  glass.position.set(1.85, DESK_TOP, -3.08); room.add(glass);
+  glass.position.set(TABLE.glass.x, DESK_TOP, TABLE.glass.z); room.add(glass);
   out.glass = glass;
 
   // What the props do: clicking a tube picks that paint and clicking a brush picks that shape (main.js does the picking).

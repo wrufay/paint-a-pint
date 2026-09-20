@@ -6,7 +6,8 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { buildRoom } from './room.js';
 import { AcrylicPainter, initAcrylicUI } from './acrylic-painter.js';
-import { addPaintProps } from './props.js';
+import { addPaintProps, TABLE } from './props.js';
+import { addTray3D } from './tray3d.js';
 
 const BG = 0x1c1915;
 const app = document.getElementById('app');
@@ -54,6 +55,9 @@ composer.addPass(new OutputPass());
 
 // ── world ────────────────────────────────────────────────────────────────────
 const world = buildRoom(scene);
+// the mixing tray on the desk (it replaces the old wooden palette prop), then the paint tubes and brushes
+world.tray = addTray3D(world.room);
+world.tray.replace(world.oldPalette);
 // the paint tubes and brushes on the desk; their labels are drawn on a canvas in DM Sans, so wait for the font first
 Promise.all([document.fonts.load('500 20px "DM Sans"'), document.fonts.load('700 20px "DM Sans"')]).catch(() => {})
   .then(() => {
@@ -78,7 +82,7 @@ const uploadPaint = () => { if (painter.syncMaps()) { paintTex.needsUpdate = tru
 // ── the easel lies flat on the desk while you paint (bird's-eye view), and stands up again in the room ──
 const DESK_TOP = 1.5; // desk surface height in room.js
 const easelUp = { pos: world.easel.position.clone(), rotX: world.easel.rotation.x };
-const easelFlat = { pos: new THREE.Vector3(0, DESK_TOP + 0.034, -3.3), rotX: -Math.PI / 2 }; // canvas face up, top edge towards the back wall; clear of the mouse and the palette
+const easelFlat = { pos: new THREE.Vector3(TABLE.canvas.x, DESK_TOP + 0.034, TABLE.canvas.z), rotX: -Math.PI / 2 }; // canvas face up, top edge towards the back wall
 const easelParts = world.easel.children.filter((c) => !world.easelHit.includes(c)); // legs and prop: hidden while it lies flat
 function poseEasel(p, lift = 0) { world.easel.position.copy(p.pos); world.easel.position.y += lift; world.easel.rotation.x = p.rotX; world.easel.updateMatrixWorld(true); }
 function withEasel(p, fn) { const keep = { pos: world.easel.position.clone(), rotX: world.easel.rotation.x }; poseEasel(p); const r = fn(); poseEasel(keep); return r; }
@@ -117,7 +121,18 @@ function homePose() {
 }
 
 // camera square-on to the canvas, centred, with the note card to the right on wide screens
+// The overhead camera for the desk view: it looks straight down at the middle of the table (TABLE.view) and pulls back until
+// the whole layout fits, so the tubes, the canvas, the tray in front of it and the jar are all in shot.
+function deskPose() {
+  const fov = 30, half = Math.tan(THREE.MathUtils.degToRad(fov / 2)), aspect = camera.aspect, V = TABLE.view;
+  const dist = Math.max(V.width / (2 * half * aspect), V.height / (2 * half));
+  const pos = new THREE.Vector3(V.x, DESK_TOP + dist, V.z);
+  const holder = new THREE.PerspectiveCamera(); holder.position.copy(pos); holder.up.set(0, 0, -1); holder.lookAt(V.x, DESK_TOP, V.z);   // (a camera, so it looks down -z)
+  return { pos, quat: holder.quaternion.clone(), fov };
+}
+
 function paintPose() {
+  if (deskMode) return deskPose();
   world.easel.updateMatrixWorld(true);
   const q = new THREE.Quaternion(); world.canvasFace.getWorldQuaternion(q);
   const c = world.canvasFace.getWorldPosition(new THREE.Vector3());
@@ -164,19 +179,20 @@ function enterPaint() {
   if (mode !== 'room') return;
   mode = 'travelling';
   hover(false);
-  // you always start at the standing easel; the card's button puts the canvas down flat on the desk (setView)
-  travel(paintPose(), () => {
+  // paint mode opens on the desk: the canvas lies flat and the camera goes overhead (the card's button stands it back up)
+  deskMode = true; ui.setDesk(true); view.onChange();
+  travel(withEasel(easelFlat, paintPose), () => {
     mode = 'paint';
     document.body.classList.remove('travelling'); document.body.classList.add('painting');
     layoutPaper();
     paintEl.classList.add('on');
     poke(6);
-  });
+  }, { from: easelUp, to: easelFlat, legs: false });
 }
 
 // The two ways to paint: at the standing easel, or with the canvas put down flat on the desk (bird's-eye view).
 // Switching happens inside paint mode: the paper fades out, the easel and camera move, the paper fades back in.
-let deskMode = false;
+let deskMode = true;   // paint mode opens on the desk, with the canvas flat and the tubes and tray around it
 const view = {
   get down() { return deskMode; },
   onChange: () => {},
@@ -185,7 +201,7 @@ const view = {
     mode = 'travelling'; painter.up(); paintEl.classList.remove('on');
     document.getElementById('cursor').style.opacity = 0;
     const from = down ? easelUp : easelFlat, to = down ? easelFlat : easelUp;
-    deskMode = down; view.onChange();
+    deskMode = down; view.onChange(); ui.setDesk(down);
     travel(withEasel(to, paintPose), () => {
       mode = 'paint';
       document.body.classList.remove('travelling');
@@ -205,7 +221,7 @@ function leavePaint(hang = true) {
   document.getElementById('cursor').style.opacity = 0;
   const hung = hang && painter.dirty ? painter.composite() : null;
   document.body.classList.remove('painting');
-  const wasDown = deskMode; deskMode = false; view.onChange();   // next time you start at the easel again
+  const wasDown = deskMode; deskMode = true; view.onChange(); ui.setDesk(true);   // the next visit starts on the desk again
   travel(homePose(), () => {
     mode = 'room';
     document.body.classList.remove('travelling');
@@ -215,7 +231,7 @@ function leavePaint(hang = true) {
       painter.clear();
       uploadPaint();
     }
-  }, wasDown ? { from: easelFlat, to: easelUp, legs: true } : undefined);   // only lift the easel back up if it was put down
+  }, wasDown ? { from: easelFlat, to: easelUp, legs: true } : undefined);   // lift the easel back up if it was lying flat
 }
 
 const ui = initAcrylicUI(painter, { onBack: () => leavePaint(true), view, isPainting: () => mode === 'paint' });
@@ -248,15 +264,97 @@ let hoverProp = null;
 function setHoverProp(o) {
   if (o === hoverProp || !world.props) return;
   hoverProp = o; world.props.hover(o); poke();
-  renderer.domElement.style.cursor = o || hovering ? 'pointer' : '';
+  showTip(o);
+}
+
+// ── hover tooltip: what a tube or brush is ──────────────────────────────────────────────────────────────────────────
+const OPACITY_NAME = { opaque: 'opaque', semi: 'semi-opaque', transparent: 'transparent' };
+const OPACITY_NOTE = { opaque: 'covers what is under it', semi: 'partly covers, partly lets through', transparent: 'glazes: lets what is under it show' };
+const SHAPE_TIP = {
+  flat: ['Flat brush', 'A row of bristles. Broad strokes, and edges when you turn it on its side.'],
+  filbert: ['Filbert brush', 'An oval tip. Soft, rounded marks, and the width follows your pressure.'],
+  round: ['Round brush', 'A round tip. Click for a dab, drag for a soft-edged line.'],
+};
+const tip = document.createElement('div');
+tip.className = 'note';
+tip.style.cssText = 'position:fixed;left:0;top:0;z-index:30;display:none;max-width:250px;padding:16px 14px 12px;pointer-events:none;font-size:var(--text-sm);line-height:1.4;color:var(--ink);';
+document.body.appendChild(tip);
+const tipLine = (text, css) => { const d = document.createElement('div'); d.textContent = text; d.style.cssText = css || ''; tip.appendChild(d); return d; };
+function showTip(o) {
+  if (!o) { tip.style.display = 'none'; return; }
+  tip.replaceChildren();
+  const paint = o.userData.paint;
+  if (paint) {
+    const head = document.createElement('div'); head.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:4px;';
+    const dot = document.createElement('span'); dot.style.cssText = `flex:none;width:18px;height:18px;border-radius:50%;background:${paint.hex};box-shadow:0 0 0 1.5px var(--ink);`;
+    const name = document.createElement('strong'); name.textContent = paint.name[0].toUpperCase() + paint.name.slice(1); name.style.cssText = 'font-weight:var(--weight-bold);';
+    head.append(dot, name); tip.appendChild(head);
+    tipLine([paint.brand.replace('Winsor & Newton ', 'W&N '), paint.code, paint.num ? 'No. ' + paint.num : ''].filter(Boolean).join(' · '), 'font-size:var(--text-xs);color:var(--ink-soft);margin-bottom:6px;');
+    tipLine(`${OPACITY_NAME[paint.opacity] || paint.opacity}: ${OPACITY_NOTE[paint.opacity] || ''}`, 'margin-bottom:6px;');
+    if (paint.blurb) tipLine(paint.blurb);
+  } else {
+    const [title, line] = SHAPE_TIP[o.userData.shape] || [o.userData.shape, ''];
+    tipLine(title, 'font-weight:var(--weight-bold);margin-bottom:4px;'); tipLine(line);
+  }
+  tip.style.display = 'block';
+}
+function moveTip(e) {
+  if (tip.style.display === 'none') return;
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.transform = `translate(${Math.min(e.clientX + 18, innerWidth - w - 8)}px, ${Math.min(e.clientY + 18, innerHeight - h - 8)}px)`;
+}
+
+// ── the mixing tray on the desk: with the canvas flat, squeeze paint onto it and mix on it right there ─────────────
+function trayPixel(e) {
+  if (!world.tray || mode !== 'paint' || !deskMode) return null;
+  ray.setFromCamera(new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1), camera);
+  return world.tray.pixelAt(ray);
+}
+ui.wipeTray = () => { world.tray.tray.clear(); poke(3); };
+let trayDrag = null;
+function trayDown(e) {
+  const px = trayPixel(e);
+  if (!px || trayDrag) return false;
+  const T = world.tray.tray, pressure = e.pointerType === 'pen' && e.pressure > 0 ? e.pressure : 0.8;
+  if (ui.trayMode() === 'squeeze') { T.beginSqueeze(ui.squeezePaint(), px[0], px[1]); trayDrag = { id: e.pointerId, mode: 'squeeze' }; }
+  else { T.beginMix(px[0], px[1], pressure); trayDrag = { id: e.pointerId, mode: 'mix', x0: px[0], y0: px[1], far: 0 }; }
+  renderer.domElement.setPointerCapture(e.pointerId);
+  poke(3);
+  return true;
+}
+function trayMove(e) {
+  if (!trayDrag || e.pointerId !== trayDrag.id) return;
+  const T = world.tray.tray;
+  for (const ev of (e.getCoalescedEvents ? e.getCoalescedEvents() : [e])) {
+    const px = trayPixel(ev.clientX === undefined ? e : ev);
+    if (!px) continue;   // the pointer slid off the tray: keep the stroke, skip this sample
+    if (trayDrag.mode === 'squeeze') T.squeezeTo(px[0], px[1]);
+    else { trayDrag.far = Math.max(trayDrag.far, Math.hypot(px[0] - trayDrag.x0, px[1] - trayDrag.y0)); T.mixTo(px[0], px[1], 0.8); }
+  }
+  poke(3);
+}
+function trayUp(e) {
+  if (!trayDrag || e.pointerId !== trayDrag.id) return false;
+  const T = world.tray.tray;
+  if (trayDrag.mode === 'squeeze') T.endSqueeze();
+  else {
+    T.endMix();
+    if (trayDrag.far < 6) { const c = T.sample(trayDrag.x0, trayDrag.y0); if (c) ui.loadMixed(c, T.paint); }   // a tap: load the brush with that colour
+  }
+  trayDrag = null; poke(3);
+  return true;
 }
 renderer.domElement.addEventListener('pointermove', (e) => {
   mouse.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  if (trayDrag) { trayMove(e); return; }
   if (mode === 'room') hover(pick(e));
   if (mode === 'room' || mode === 'paint') setHoverProp(pickProp(e));
+  moveTip(e);
+  renderer.domElement.style.cursor = hoverProp || hovering ? 'pointer' : trayPixel(e) ? 'crosshair' : '';
 });
-renderer.domElement.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; if (mode === 'paint' && !pickProp(e)) trayDown(e); });
 renderer.domElement.addEventListener('pointerup', (e) => {
+  if (trayUp(e)) { downAt = null; return; }
   if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 6 && (mode === 'room' || mode === 'paint')) {
     const prop = pickProp(e);
     if (prop) {
@@ -267,7 +365,7 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   }
   downAt = null;
 });
-renderer.domElement.addEventListener('pointercancel', () => { downAt = null; });
+renderer.domElement.addEventListener('pointercancel', (e) => { trayUp(e); downAt = null; });
 
 // ── loop ─────────────────────────────────────────────────────────────────────
 let texT = 0;
@@ -305,6 +403,7 @@ function frame(now) {
   }
 
   painter.tick(now);
+  if (world.tray && world.tray.update(now / 1000)) poke(2);   // the tray dries too
   // the 3D easel only needs the new pixels when it can be seen (the paint overlay hides it), and not every frame
   if (mode !== 'paint' && painter.changed && now - texT > 100) { uploadPaint(); painter.changed = false; texT = now; poke(2); }
 
@@ -330,4 +429,4 @@ resize();
 requestAnimationFrame(frame);
 
 // tiny hook for automated screenshots / debugging
-window.__paint = { enterPaint, leavePaint, painter, world, camera, renderer, uploadPaint, get mode() { return mode; } };
+window.__paint = { enterPaint, leavePaint, painter, world, camera, renderer, uploadPaint, ui, get mode() { return mode; }, get deskMode() { return deskMode; } };

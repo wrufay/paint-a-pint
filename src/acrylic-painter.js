@@ -1,7 +1,6 @@
 // The room's painter, backed by the acrylic engine. It has the same surface as the old gouache Painter in paint.js
 // (down / move / up / clear / composite, .canvas, .dirty), so main.js only swaps the class.
 import { PaintEngine, DEFAULTS, hexToLinear, linearToSrgb } from './brush/engine.js';
-import { Tray, TRAY_W, TRAY_H } from './brush/tray.js';
 import { PAINTS, PALETTES } from './brush/paints.js';
 import { buildTunePanel, loadParams, saveParams } from './brush/tune.js';
 
@@ -123,11 +122,13 @@ export function initAcrylicUI(painter, { onBack, view, isPainting = () => true }
   const size = document.getElementById('size');
 
   const ui = { choose: null, setShape: null, onSelect: null, onShape: null };   // what the 3D props in the room use to drive the card
-  let chipEl = null;   // the palette's "brush colour" chip
+  let chipEl = null, brushName = null;   // the brush-colour chip and its label
+  let choose = (p) => { painter.setPaint(p); sync(); };   // replaced below once the tray tools exist
   const cssColour = (rgb) => '#' + rgb.map((v) => Math.round(Math.min(1, linearToSrgb(Math.max(0, v))) * 255).toString(16).padStart(2, '0')).join('');
   const sync = () => {
     swatches.querySelectorAll('.sw').forEach((b) => b.classList.toggle('sel', b.dataset.id === painter.paint.id));
     if (chipEl) chipEl.style.background = cssColour(painter.color);
+    if (brushName) brushName.textContent = painter.paint.id === 'mixed' ? 'your own mix' : painter.paint.name;
     if (ui.onSelect) ui.onSelect(painter.paint);
   };
   BOX.forEach((p, i) => {
@@ -184,126 +185,65 @@ export function initAcrylicUI(painter, { onBack, view, isPainting = () => true }
   let wet = false;
   const wetBtn = mk('wetness', () => { wet = !wet; painter.setWetnessView(wet); wetBtn.classList.toggle('sel', wet); wetHint.style.display = wet ? 'block' : 'none'; });
   mk('save png', () => painter.savePng());
-  const settingsBtn = mk('settings', () => { const on = panel.style.display === 'none'; panel.style.display = on ? 'block' : 'none'; settingsBtn.classList.toggle('sel', on); if (on) { panel.refresh(); setPalette(false); } });
+  const settingsBtn = mk('settings', () => { const on = panel.style.display === 'none'; panel.style.display = on ? 'block' : 'none'; settingsBtn.classList.toggle('sel', on); if (on) panel.refresh(); });
   const wetHint = document.createElement('p');
   wetHint.textContent = 'blue = still workable · orange = getting tacky · no tint = dry';
   wetHint.style.cssText = 'display:none;margin:0 0 12px;font-size:var(--text-xs);color:var(--ink-soft);text-align:center;';
   const back = document.getElementById('back');
   back.parentNode.insertBefore(wetHint, back);
 
-  // ── mixing palette: a tray to squeeze paints onto and mix on. Tap a colour to load your brush with it. ──────────────
-  // (the tray is a second engine, see src/brush/tray.js; it is created the first time the palette opens)
-  let tray = null, trayCtx = null, trayImg = null, paletteOpen = false, trayFrame = 0;
-  const trayCanvas = document.createElement('canvas');
-  trayCanvas.width = TRAY_W; trayCanvas.height = TRAY_H;
-  trayCanvas.style.cssText = 'display:block;width:100%;height:auto;border-radius:var(--radius-card);touch-action:none;cursor:crosshair;box-shadow:inset 0 0 0 1.5px var(--line);';
-  const palettePanel = document.createElement('div');
-  palettePanel.className = 'note';
-  palettePanel.style.cssText = 'display:none;position:absolute;left:16px;bottom:16px;width:288px;padding:20px 12px 12px;';
-  const paletteHead = document.createElement('h2');
-  paletteHead.textContent = 'PALETTE'; paletteHead.style.cssText = 'margin:0 0 8px 4px;color:var(--ultramarine);font-size:var(--text-lg);letter-spacing:.08em;';
-  // two tools on the tray: squeeze paint out where you tap or drag, or mix / pick colours
-  let trayMode = 'squeeze', squeezePaint = null;
-  const modeRow = document.createElement('div');
-  modeRow.className = 'card-tools'; modeRow.style.cssText = 'grid-template-columns:repeat(2,1fr);margin:0 0 8px;';
-  const modeBtns = {};
-  for (const [k, label] of [['squeeze', 'squeeze paint'], ['mix', 'mix and pick']]) {
-    const b = document.createElement('button');
-    b.className = 'btn'; b.textContent = label; b.onclick = () => setTrayMode(k);
-    modeBtns[k] = b; modeRow.appendChild(b);
-  }
-  const paletteRow = document.createElement('div');
-  paletteRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:8px;';
+  // ── the brush colour, and the tray's two tools ─────────────────────────────────────────────────────────────────────
+  // With the canvas flat on the desk you pick paints by clicking the 3D tubes, so the swatch circles are only shown for the
+  // standing-easel view. In their place: what the brush is loaded with, and which tool the tray under the canvas uses.
+  const brushRow = document.createElement('div');
+  brushRow.style.cssText = 'display:flex;align-items:center;gap:10px;margin:0 0 12px;';
   chipEl = document.createElement('span');
-  chipEl.style.cssText = 'flex:none;width:24px;height:24px;border-radius:50%;box-shadow:0 0 0 2px var(--ink);';
-  const chipLabel = document.createElement('span');
-  chipLabel.textContent = 'your brush colour'; chipLabel.style.cssText = 'flex:1;font-size:var(--text-xs);color:var(--ink-soft);';
+  chipEl.style.cssText = 'flex:none;width:28px;height:28px;border-radius:50%;box-shadow:0 0 0 2px var(--ink);';
+  brushName = document.createElement('div');
+  brushName.style.cssText = 'font-size:var(--text-sm);line-height:1.25;color:var(--ink);';
+  brushRow.append(chipEl, brushName);
+  swatches.before(brushRow);
+
+  let trayMode = 'squeeze', squeezePaint = painter.paint;
+  const trayBox = document.createElement('div');
+  trayBox.style.cssText = 'margin:0 0 12px;';
+  const trayLabel = document.createElement('div');
+  trayLabel.textContent = 'palette tray'; trayLabel.style.cssText = 'font-size:var(--text-xs);letter-spacing:var(--tracking-caps);text-transform:uppercase;color:var(--ink-soft);margin:0 0 6px;';
+  const trayRow = document.createElement('div');
+  trayRow.className = 'card-tools'; trayRow.style.cssText = 'margin:0 0 6px;';
+  const trayBtns = {};
+  const trayHint = document.createElement('p');
+  trayHint.style.cssText = 'margin:0;font-size:var(--text-xs);line-height:1.4;color:var(--ink-soft);';
+  const syncTray = () => {
+    for (const k in trayBtns) trayBtns[k].classList.toggle('sel', k === trayMode);
+    trayHint.textContent = trayMode === 'squeeze'
+      ? `tap or drag on the tray to squeeze out ${squeezePaint ? squeezePaint.name : 'paint'}. Click another tube to switch.`
+      : 'drag on the tray to mix with a knife. Tap a colour to load your brush with it.';
+  };
+  for (const [k, label] of [['squeeze', 'squeeze'], ['mix', 'mix & pick']]) {
+    const b = document.createElement('button');
+    b.className = 'btn'; b.textContent = label; b.onclick = () => { trayMode = k; syncTray(); };
+    trayBtns[k] = b; trayRow.appendChild(b);
+  }
   const wipeBtn = document.createElement('button');
-  wipeBtn.className = 'btn'; wipeBtn.textContent = 'wipe tray'; wipeBtn.style.cssText = 'width:auto;margin:0;padding:6px 10px;font-size:var(--text-xs);';
-  paletteRow.append(chipEl, chipLabel, wipeBtn);
-  const paletteHint = document.createElement('p');
-  paletteHint.style.cssText = 'margin:8px 4px 0;font-size:var(--text-xs);color:var(--ink-soft);line-height:1.4;';
-  palettePanel.append(paletteHead, modeRow, trayCanvas, paletteRow, paletteHint);
-  document.getElementById('paint').appendChild(palettePanel);
+  wipeBtn.className = 'btn'; wipeBtn.textContent = 'wipe'; wipeBtn.title = 'scrape the tray clean';
+  wipeBtn.onclick = () => ui.wipeTray && ui.wipeTray();
+  trayRow.appendChild(wipeBtn);
+  trayBox.append(trayLabel, trayRow, trayHint);
+  brushRow.after(trayBox);
+  syncTray();
 
-  function setTrayMode(m) {
-    trayMode = m;
-    for (const k in modeBtns) modeBtns[k].classList.toggle('sel', k === m);
-    paletteHint.textContent = m === 'squeeze'
-      ? (squeezePaint ? `tap or drag on the tray to squeeze out ${squeezePaint.name}. Click another paint on the card to switch.` : 'click a paint on the card, then tap or drag on the tray to squeeze it out where you want it.')
-      : 'drag to mix the paints together with a knife · tap a colour on the tray to load your brush with it';
-  }
-  const blitTray = (all) => { const r = all ? tray.engine.renderAll() : tray.tick(performance.now() / 1000); if (r) trayCtx.putImageData(trayImg, 0, 0, r.x, r.y, r.w, r.h); };
-  const ensureTray = () => {
-    if (tray) return;
-    tray = new Tray(); trayCtx = trayCanvas.getContext('2d'); trayImg = new ImageData(tray.engine.rgba, TRAY_W, TRAY_H);
-    blitTray(true);
-  };
-  const trayLoop = () => { if (!paletteOpen) return; blitTray(false); trayFrame = requestAnimationFrame(trayLoop); };   // keeps drying and redrawing while it is open
-  function setPalette(on) {
-    paletteOpen = on;
-    palettePanel.style.display = on ? 'block' : 'none';
-    paletteBtn.classList.toggle('sel', on);
-    if (on) { ensureTray(); if (!squeezePaint && painter.paint.id !== 'mixed') squeezePaint = painter.paint; setTrayMode('squeeze'); panel.style.display = 'none'; settingsBtn.classList.remove('sel'); cancelAnimationFrame(trayFrame); trayLoop(); }
-    else cancelAnimationFrame(trayFrame);
-  }
-  // choosing a paint: it becomes the brush colour, and with the palette open it is also squeezed onto the tray
-  function choose(p) {
-    painter.setPaint(p); sync();
-    squeezePaint = p;
-    if (paletteOpen) setTrayMode('squeeze');   // you then choose where on the tray it goes
-  }
-  const paletteBtn = document.createElement('button');
-  paletteBtn.className = 'btn block'; paletteBtn.textContent = 'mixing palette';
-  paletteBtn.title = 'mix your own colours on a tray (key: p)';
-  paletteBtn.onclick = () => setPalette(!paletteOpen);
-  (viewBtn || shapes).after(paletteBtn);
-  wipeBtn.onclick = () => tray.clear();
-
-  const toTray = (e) => { const r = trayCanvas.getBoundingClientRect(); return [((e.clientX - r.left) / r.width) * TRAY_W, ((e.clientY - r.top) / r.height) * TRAY_H]; };
-  const pressureOf = (e) => (e.pointerType === 'pen' && e.pressure > 0 ? e.pressure : 0.8);
-  let trayDrag = null;
-  trayCanvas.addEventListener('pointerdown', (e) => {
-    if (e.pointerType === 'touch' && performance.now() - penSeen < 8000) return;   // palm rejection, as on the canvas
-    if (trayDrag || !tray) return;
-    const [x, y] = toTray(e);
-    if (trayMode === 'squeeze') {
-      if (!squeezePaint) { paletteHint.textContent = 'click a paint on the card first, then tap the tray'; return; }
-      trayCanvas.setPointerCapture(e.pointerId);
-      trayDrag = { id: e.pointerId, mode: 'squeeze' };
-      tray.beginSqueeze(squeezePaint, x, y);
-    } else {
-      trayCanvas.setPointerCapture(e.pointerId);
-      trayDrag = { id: e.pointerId, mode: 'mix', x0: x, y0: y, far: 0 };
-      tray.beginMix(x, y, pressureOf(e));
-    }
-  });
-  trayCanvas.addEventListener('pointermove', (e) => {
-    if (!trayDrag || e.pointerId !== trayDrag.id) return;
-    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
-    for (const ev of evs.length ? evs : [e]) {
-      const [x, y] = toTray(ev);
-      if (trayDrag.mode === 'squeeze') tray.squeezeTo(x, y);
-      else { trayDrag.far = Math.max(trayDrag.far, Math.hypot(x - trayDrag.x0, y - trayDrag.y0)); tray.mixTo(x, y, pressureOf(ev)); }
-    }
-  });
-  const trayEnd = (e) => {
-    if (!trayDrag || e.pointerId !== trayDrag.id) return;
-    if (trayDrag.mode === 'squeeze') tray.endSqueeze();
-    else {
-      tray.endMix();
-      if (trayDrag.far < 6) {   // a tap, not a drag: load the brush with the colour under the finger
-        const c = tray.sample(trayDrag.x0, trayDrag.y0);
-        if (c) { painter.setMixedColour(c, tray.paint); sync(); }
-      }
-    }
-    trayDrag = null;
-  };
-  trayCanvas.addEventListener('pointerup', trayEnd);
-  trayCanvas.addEventListener('pointercancel', trayEnd);
-
+  // the swatches only in the easel view, the tray tools only in the desk view
+  ui.setDesk = (down) => { swatches.style.display = down ? 'none' : ''; trayBox.style.display = down ? '' : 'none'; };
+  ui.setDesk(view ? view.down : false);
+  ui.trayMode = () => trayMode;
+  ui.squeezePaint = () => squeezePaint;
+  ui.loadMixed = (rgb, paint) => { painter.setMixedColour(rgb, paint); sync(); };
+  // picking a tube also makes it the paint the tray squeezes, and switches the tray to squeeze
+  choose = (p) => { painter.setPaint(p); squeezePaint = p; trayMode = 'squeeze'; syncTray(); sync(); };
   ui.choose = choose;
   ui.setShape = (k) => { painter.engine.params.shape = k; saveParams(painter.engine.params); syncShape(); };
+
   const esc = document.getElementById('esc'); if (esc) esc.textContent = 'esc: back to the room, painting stays on the easel';
   sync();
 
@@ -320,7 +260,6 @@ export function initAcrylicUI(painter, { onBack, view, isPainting = () => true }
       size.value = painter.size; updateCursor(); if (panel.style.display !== 'none') panel.refresh();
     } else if (!e.repeat && (k === 'z' || k === 'Z')) painter.undo();
     else if (!e.repeat && (k === 'w' || k === 'W')) wetBtn.click();
-    else if (!e.repeat && (k === 'p' || k === 'P')) setPalette(!paletteOpen);
     else return;
     e.preventDefault();
   });

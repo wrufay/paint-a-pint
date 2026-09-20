@@ -207,7 +207,7 @@ export function buildRoom(scene) {
   box(room, 1.2, 0.03, 0.44, new THREE.MeshBasicMaterial({ color: new THREE.Color(0.55, 0.6, 1.2), toneMapped: false }), -1.5, TOP + 0.02, -2.72, { cast: false, ry: 0.08 });
   box(room, 1.15, 0.08, 0.4, M.white, -1.5, TOP + 0.07, -2.72, { r: 0.03, ry: 0.08 });
   plane(room, 1.02, 0.34, new THREE.MeshStandardMaterial({ map: keyboardTex(), roughness: 0.55 }), -1.5, TOP + 0.113, -2.72).rotation.set(-Math.PI / 2, 0, -0.08);
-  box(room, 0.14, 0.2, 0.2, M.white, -0.55, TOP + 0.1, -2.7, { r: 0.06, rz: 0.22 });
+  box(room, 0.14, 0.2, 0.2, M.white, -0.8, TOP + 0.1, -2.66, { r: 0.06, rz: 0.22 });   // (beside the keyboard, clear of the table area the paints use)
   // open notebook with a yellow sticky note, a pink Bible and a dark green book leaning on the wall
   box(room, 1.05, 0.05, 0.55, M.cream, -3.05, TOP + 0.025, -2.55, { r: 0.015, ry: -0.12 });
   box(room, 0.02, 0.055, 0.55, std(0xc9bfa8), -3.05, TOP + 0.03, -2.55, { r: 0.005, ry: -0.12 });
@@ -232,9 +232,10 @@ export function buildRoom(scene) {
   // paint palette
   const palette = cyl(room, 0.3, 0.3, 0.03, std(0xd9bc8c), 0.95, TOP + 0.015, -2.85, { seg: 32 });
   palette.scale.z = 0.72; palette.rotation.y = 0.5;
+  const oldPalette = [palette];   // returned so the interactive mixing tray (src/tray3d.js) can take its place
   [0xd4552f, 0x3d5aa8, 0xd9a441, 0x5b8a4a, 0xf7f2e4].forEach((c, i) => {
     const a = 0.5 + i * 0.75;
-    sph(room, 0.045, std(c, { roughness: 0.5 }), 0.95 + Math.cos(a) * 0.19, TOP + 0.05, -2.85 - Math.sin(a) * 0.12, [1, 0.5, 1], { cast: false });
+    oldPalette.push(sph(room, 0.045, std(c, { roughness: 0.5 }), 0.95 + Math.cos(a) * 0.19, TOP + 0.05, -2.85 - Math.sin(a) * 0.12, [1, 0.5, 1], { cast: false }));
   });
 
   // pen cup with pastel pens, a pink beaded flower and a yellow plush
@@ -341,5 +342,5 @@ export function buildRoom(scene) {
   // the window is behind everything, so light the camera-facing sides with a warm frontal fill
   const fill = new THREE.DirectionalLight(0xfff0d8, 0.85); fill.position.set(7, 6, 9); scene.add(fill);
 
-  return { room, easel, canvasFace, canvasMat, easelHit, CW, CH, frames, hang, sun, hemi, fill, glowLights, reflector };
+  return { room, easel, canvasFace, canvasMat, easelHit, CW, CH, frames, hang, sun, hemi, fill, glowLights, reflector, oldPalette };
 }
