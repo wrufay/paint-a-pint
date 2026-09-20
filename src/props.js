@@ -21,6 +21,8 @@ const NAMES = {
 const LIGHTFAST = { 'naphthol-red': '++', 'azo-yellow': '++', 'naples-yellow': '+++', 'kings-blue': '+++', 'burnt-sienna': '+++' };   // the +/++/+++ on the Amsterdam cards
 
 const SANS = '"DM Sans", system-ui, sans-serif';
+// mix a colour towards white: 0 = the colour, 1 = white
+const lighten = (hex, t) => { const n = parseInt(hex.slice(1), 16); const m = (v) => Math.round(v + (255 - v) * t); return `rgb(${m((n >> 16) & 255)},${m((n >> 8) & 255)},${m(n & 255)})`; };
 const luminance = (hex) => { const n = parseInt(hex.slice(1), 16); return (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255; };
 
 // ── the label, drawn as if the tube stood upright with its cap at the top ─────────────────────────────────────────
@@ -37,29 +39,43 @@ function labelTexture(paint) {
   g.textBaseline = 'alphabetic';
 
   if (paint.brand === 'Amsterdam') {
-    // swatch, pigment code, multilingual names, number: the layout of the Amsterdam label
-    g.fillStyle = '#1b1b1b'; g.font = `700 34px ${SANS}`; g.textAlign = 'center';
-    g.fillText('AMSTERDAM', cx, 78);
-    g.font = `500 22px ${SANS}`; g.fillText('STANDARD SERIES  ·  ACRYLIC', cx, 110);
-    g.fillStyle = paint.hex; g.fillRect(x0, 140, lw, 210);              // the swatch is the paint
-    g.fillStyle = 'rgba(255,255,255,.10)'; for (let i = 0; i < 7; i++) g.fillRect(x0, 152 + i * 28, lw, 5);   // drawn-down brush marks
-    g.fillStyle = 'rgba(0,0,0,.10)'; for (let i = 0; i < 6; i++) g.fillRect(x0, 166 + i * 28, lw, 4);
-    g.fillStyle = '#1b1b1b'; g.font = `500 24px ${SANS}`; g.textAlign = 'center';
-    g.fillText(paint.code || '', cx, 388);
-    g.textAlign = 'left'; g.font = `700 34px ${SANS}`;
-    g.fillText(names[0], x0, 442);
-    g.font = `500 26px ${SANS}`;
-    names.slice(1).forEach((n, i) => g.fillText(n, x0, 480 + i * 34));
-    g.textAlign = 'right'; g.font = `700 40px ${SANS}`;
-    g.fillText(`${LIGHTFAST[paint.id] || ''} ${paint.num || ''}`.trim(), x0 + lw, 442 + 0);
-    // the transparency square: black = opaque, half = semi, white with a diagonal = transparent
-    const sx = x0 + lw - 44, sy = 470;
-    g.fillStyle = '#fff'; g.fillRect(sx, sy, 44, 44);
+    // The real Standard Series tube, crimp at the top: a red seal with a hang hole, a red band with the name and the "all
+    // acrylics" mark, a pale "Standard Series" band, then the tube in the paint's own colour with a black "ACRYLIC" block, and
+    // near the cap a lighter panel with the names in six languages, the number, the transparency square, the +++ and a barcode.
+    const body = lighten(paint.hex, 0.06), pale = lighten(paint.hex, 0.86), panel = lighten(paint.hex, 0.62), RED = '#d5262d';
+    g.fillStyle = body; g.fillRect(0, 0, W, H);
+    g.fillStyle = RED; g.fillRect(0, 0, W, 258);
+    g.strokeStyle = 'rgba(90,0,0,.28)'; g.lineWidth = 2;                                  // the ridged seal
+    for (let y = 8; y < 118; y += 9) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+    g.fillStyle = '#fff'; g.beginPath();                                                  // the hang hole
+    if (g.roundRect) g.roundRect(cx - 118, 30, 236, 56, 28); else g.rect(cx - 118, 30, 236, 56);
+    g.fill();
+    g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = `700 58px ${SANS}`;   // (sized to sit on the front half of the tube: the label wraps round the curve)
+    g.fillText('AMSTERDAM', cx, 190);
+    g.font = `700 24px ${SANS}`; g.fillStyle = '#fff'; g.fillRect(cx - 78, 212, 156, 40);
+    g.fillStyle = RED; g.font = `700 13px ${SANS}`; g.fillText('ALL', cx, 226); g.font = `700 17px ${SANS}`; g.fillText('ACRYLICS', cx, 244);
+    g.fillStyle = pale; g.fillRect(0, 258, W, 66);                                        // the "Standard Series" band
+    g.fillStyle = '#1b1b1b'; g.font = `700 42px ${SANS}`; g.fillText('Standard Series', cx, 306);
+    // the black block with ACRYLIC running up it, and the small three-language line beside it
+    g.fillStyle = '#121212'; g.fillRect(cx - 132, 350, 150, 290);
+    // (rotated a quarter turn, so glyphs grow leftwards from the baseline; stretched taller so the word fills the block like the real one)
+    g.save(); g.translate(cx - 19, 626); g.rotate(-Math.PI / 2); g.scale(1, 1.7); g.fillStyle = '#fff'; g.textAlign = 'left'; g.font = `700 62px ${SANS}`; g.fillText('ACRYLIC', 0, 0); g.restore();
+    g.save(); g.translate(cx + 54, 640); g.rotate(-Math.PI / 2); g.fillStyle = '#1b1b1b'; g.textAlign = 'left'; g.font = `500 18px ${SANS}`; g.fillText('ACRYL / ACRYLIQUE / ACRÍLICO', 0, 0); g.restore();
+    // the names panel, number, transparency square and +++
+    g.fillStyle = panel; g.fillRect(x0, 664, lw, 158);
+    g.fillStyle = '#1b1b1b'; g.textAlign = 'left'; g.font = `500 17px ${SANS}`;
+    names.forEach((n, i) => g.fillText(n.toUpperCase(), x0 + 10, 686 + i * 20));
+    g.font = `700 36px ${SANS}`; g.fillText(String(paint.num || ''), x0 + 10, 812);
+    const sx = x0 + 96, sy = 786;
+    g.fillStyle = '#fff'; g.fillRect(sx, sy, 28, 28);
     g.fillStyle = '#111';
-    if (paint.opacity === 'opaque') g.fillRect(sx, sy, 44, 44);
-    else if (paint.opacity === 'semi') { g.beginPath(); g.moveTo(sx + 44, sy); g.lineTo(sx + 44, sy + 44); g.lineTo(sx, sy + 44); g.closePath(); g.fill(); }
-    else { g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.moveTo(sx, sy + 44); g.lineTo(sx + 44, sy); g.stroke(); }
-    g.strokeStyle = '#111'; g.lineWidth = 3; g.strokeRect(sx, sy, 44, 44);
+    if (paint.opacity === 'opaque') g.fillRect(sx, sy, 28, 28);
+    else if (paint.opacity === 'semi') { g.beginPath(); g.moveTo(sx + 28, sy); g.lineTo(sx + 28, sy + 28); g.lineTo(sx, sy + 28); g.closePath(); g.fill(); }
+    else { g.strokeStyle = '#111'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(sx, sy + 28); g.lineTo(sx + 28, sy); g.stroke(); }
+    g.strokeStyle = '#111'; g.lineWidth = 2.5; g.strokeRect(sx, sy, 28, 28);
+    g.fillStyle = '#1b1b1b'; g.font = `700 32px ${SANS}`; g.fillText(LIGHTFAST[paint.id] || '', x0 + 136, 812);
+    g.fillStyle = '#fff'; g.fillRect(x0 + lw - 58, 690, 48, 120);                        // the barcode strip
+    g.fillStyle = '#111'; for (let i = 0, x = x0 + lw - 54; i < 16; i++) { const w = 1 + ((i * 7) % 3); g.fillRect(x, 696, w, 108); x += w + 1.6; }
   } else {
     // Galeria: maker's name, a yellow band, then a band in the paint's colour with the names in white or ink
     g.fillStyle = '#1b1b1b'; g.textAlign = 'center'; g.font = `700 60px Georgia, "Times New Roman", serif`;
@@ -84,7 +100,37 @@ function labelTexture(paint) {
 const smooth = (t) => { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); };
 const R = 0.046, BODY = 0.235;                                            // tube radius and the length of its body
 
+// The Amsterdam tube stands on a wide black cap, with the red crimped seal at the top. Built upright, cap at y = 0.
+function makeAmsterdamTube(paint) {
+  const g = new THREE.Group();
+  const CAP = 0.04, SH = 0.035, L = 0.235, top = CAP + SH + L;             // cap, shoulder and body heights; y of the crimp
+  const body = new THREE.CylinderGeometry(R, R, L, 40, 24, true);
+  body.translate(0, CAP + SH + L / 2, 0);
+  body.rotateY(Math.PI);                                                  // so the middle of the label faces +z
+  const p = body.attributes.position;
+  for (let i = 0; i < p.count; i++) {                                     // flatten the top into the flat crimped seal
+    const t = smooth((top - p.getY(i)) / 0.075);
+    p.setZ(i, p.getZ(i) * (0.11 + 0.89 * t));
+  }
+  body.computeVertexNormals();
+  const label = labelTexture(paint);
+  const mat = new THREE.MeshPhysicalMaterial({ map: label, roughness: 0.3, metalness: 0.02, clearcoat: 0.5, clearcoatRoughness: 0.35, side: THREE.DoubleSide });
+  const bodyMesh = new THREE.Mesh(body, mat); bodyMesh.castShadow = bodyMesh.receiveShadow = true; g.add(bodyMesh);
+  // the short shoulder, in the tube's own colour, and the wide black cap it stands on
+  const shoulder = new THREE.Mesh(new THREE.LatheGeometry([[0.040, CAP], [0.041, CAP + 0.01], [R * 0.86, CAP + 0.022], [R, CAP + SH]].map(([r, y]) => new THREE.Vector2(r, y)), 32), new THREE.MeshPhysicalMaterial({ color: new THREE.Color(lighten(paint.hex, 0.06)), roughness: 0.3, clearcoat: 0.5 }));
+  shoulder.castShadow = true; g.add(shoulder);
+  const capMat = new THREE.MeshStandardMaterial({ color: 0x141416, roughness: 0.42, metalness: 0.04 });
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.041, 0.044, CAP, 28), capMat); cap.position.y = CAP / 2; cap.castShadow = true; g.add(cap);
+  for (let i = 0; i < 20; i++) {                                          // the grip ribs round the cap
+    const a = (i / 20) * Math.PI * 2, rib = new THREE.Mesh(new THREE.BoxGeometry(0.004, CAP * 0.9, 0.004), capMat);
+    rib.position.set(Math.sin(a) * 0.0435, CAP / 2, Math.cos(a) * 0.0435); rib.rotation.y = a; g.add(rib);
+  }
+  g.userData.paint = paint;
+  return g;
+}
+
 function makeTube(paint) {
+  if (paint.brand === 'Amsterdam') return makeAmsterdamTube(paint);
   const g = new THREE.Group();
   const label = labelTexture(paint);
   const body = new THREE.CylinderGeometry(R, R, BODY, 40, 24, true);
