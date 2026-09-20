@@ -4,8 +4,9 @@ One place for colour, type and technical UI rules. If code disagrees with this f
 
 - Tokens: `src/tokens.css` (not imported by any page yet, see "Adopting the tokens").
 - Font comparison page: `docs/design/font-specimen.html`.
+- Colour: `docs/design/colour-specimen-original.html` is the chosen 14-token palette. `docs/design/colour-specimen.html` holds the alternatives explored (see "Alternatives explored").
 
-Status: **typography decided, colour provisional.**
+Status: **typography decided, colour decided.**
 
 ## Vibe
 
@@ -24,7 +25,7 @@ Three families.
 
 Rules:
 - Young Serif has a single weight. Never fake bold or italic on it.
-- **Chips** (MENU, PALETTE): DM Sans 700, 12px, uppercase, `--tracking-caps`. Cream paper scrap, slight tilt, pink tape strip on top.
+- **Chips** (MENU, PALETTE): DM Sans 700, 12px, uppercase, `--tracking-caps`. Cream paper scrap, slight tilt, a tape strip on top (see "Tape" under Colour).
 - **Buttons**: DM Sans 400, 12px, pill shape, `--tracking-btn`.
 - **Body / helper text**: DM Sans 400, 14px, line-height about 1.55.
 - **Tube labels** (modelled on the Amsterdam label: swatch, pigment code, multilingual names, number): DM Sans 500, 14px. Pigment code (e.g. `PR112`) 12px centred under the swatch, colour number bold and right-aligned. DM Sans is wider than a true condensed face, so give label textures room.
@@ -50,27 +51,72 @@ Do this for every family and weight a texture uses, and check that the tube labe
 
 Currently the specimen loads from Google Fonts. For the app, self-host (Fontsource via npm, bundled by Vite) so it works offline and on iPad. That means a `package.json` change, so do it as its own commit and check no other session has uncommitted edits to `package.json` first. Do not rely on `/System/Library/Fonts`: it is macOS-only.
 
-## Colour (provisional)
+## Colour (decided)
 
-These are the values already in `index.html` and `lab.html`. They stay until the colour pass, which should sample from the desk photos and inspo instead of inventing.
+Fourteen tokens. Values were sampled from the desk photos, paintings and room inspo (the specimen shows the sources); `--ink-soft` and the ones marked new were added on top of what the code already had.
 
-| Token | Value | Where it comes from |
+| Group | Token | Value | Role |
+|---|---|---|---|
+| Surface | `--cream` | `#fbf7ee` | cards, chips |
+| Surface | `--paper` | `#f6efdd` | canvas / sheet surface |
+| Surface | `--butter` | `#ecdcaa` | highlight, lamp glow, hover wash (new) |
+| Ink | `--ink` | `#4a3b34` | text on light |
+| Ink | `--ink-soft` | `#756558` | secondary text on light (new) |
+| Dark | `--backdrop` | `#1c1915` | room page background |
+| Dark | `--backdrop-lab` | `#2b2622` | lab page background |
+| Dark | `--dusk` | `#404070` | night surface (new) |
+| Dark | `--muted-on-dark` | `#cdbfae` | secondary text on dark |
+| Accent | `--pink` | `#e58a8a` | decoration |
+| Accent | `--green` | `#5fa88c` | decoration |
+| Accent | `--sky` | `#68a0d1` | decoration (new) |
+| Accent | `--terracotta` | `#954a33` | primary action on light, coloured text (new) |
+| Accent | `--ultramarine` | `#335295` | coloured text and links on light (new) |
+
+`room.js` hard-codes about 30 more hex values for the room itself (walls, sky, lawn, and so on). Those are scene art, not UI, and are out of scope for now. The nine paint tubes are data in `src/brush/paints.js`, not tokens: keep the UI quieter than the paint so the tubes are the loudest colours on screen.
+
+### What each accent is for
+
+Each accent has one job, so colour is never arbitrary:
+
+- **Pink, green, sky: decoration.** Tape, dashed borders, selection rings, slider tracks, tags.
+- **Terracotta: the primary action** on light surfaces (cream text on it), and coloured text.
+- **Ultramarine: coloured text and links** on light surfaces, secondary headings.
+- **Butter: highlight.** Lamp glow, a hover or selected wash. Text on it is `--ink`.
+- **Dusk: the night surface.**
+
+### Tape
+
+Tape strips on chips and labels may be pink, green or sky, chosen freely, like real washi tape. Tape colour carries no meaning, so never use it to signal state. Chips and tape labels stay paper-coloured in every theme: they are physical objects in the scene, not themed UI.
+
+### Text safety (WCAG 2.x, small text needs 4.5:1)
+
+| On | OK for text | Not for small text |
 |---|---|---|
-| `--cream` | `#fbf7ee` | cards, chips |
-| `--paper` | `#f6efdd` | canvas surface |
-| `--pink` | `#e58a8a` | accent, tape strip |
-| `--green` | `#5fa88c` | accent |
-| `--ink` | `#4a3b34` | text on light |
-| `--backdrop` | `#1c1915` | room page background |
-| `--backdrop-lab` | `#2b2622` | lab page background |
+| cream / paper | ink 9.99, ink-soft 5.23, terracotta 5.94, ultramarine 7.06 | pink 2.36, green 2.63, sky 2.61 |
+| backdrop `#1c1915` | cream 16.38, butter 12.83, muted-on-dark 9.72, pink 6.95, sky 6.29, green 6.23 | none |
+| dusk `#404070` | cream 8.99, butter 7.04 | pink 3.81 (and green 3.42, sky 3.45) |
 
-`room.js` hard-codes about 30 more hex values for the room itself (walls, sky, lawn, and so on). Those are scene art, not UI, and are out of scope for now.
+Text on a filled colour:
+- OK: cream on terracotta 5.94, cream on ultramarine 7.06, ink on butter 7.82, and `--backdrop` on pink, green or sky when the button sits on a dark surface (pink 6.95).
+- Not OK: `--ink` on pink 4.24, on green 3.80, on sky 3.83, and white on green 2.81.
 
-Open questions for the colour pass: a real palette from the photos, the dusk-indigo and lamp-yellow moods from the inspo, and whether the UI should change with the selected room (alps, Waterloo, home).
+Practical rule: **on light surfaces pink, green and sky are never text or button labels.** Put the label on cream next to the colour, or use terracotta or ultramarine.
+
+### Known mismatch with the code today
+
+`index.html` sets the primary button as white on `--green` (2.81:1) and the card heading in `--green` on cream (2.63:1); both fail the rule above. When the tokens are adopted, make the primary button terracotta with cream text and set the card heading in `--ink` or `--ultramarine`.
+
+### Alternatives explored (not adopted)
+
+Kept in `docs/design/colour-specimen.html` for reference:
+- A trimmed 10-token, 2-hue palette that adds a `--green-deep` (`#357059`) instead of terracotta.
+- One-accent schemes (strawberry, melon, blueberry, apricot) and a "fruit salad" two-accent default.
+- A deeper night indigo (`#232340` page, `#30305a` card). Raw `--dusk` is too light to carry pink, green or sky text; if that is ever needed at night, this is the fix.
+- Per-room accents (alps, Waterloo, home) are still an open question: nothing in the palette prevents it.
 
 ## Adopting the tokens
 
-`index.html` and `lab.html` each define their own `:root` tokens inline. `src/tokens.css` reuses the same names (`--cream`, `--pink`, `--green`, `--ink`, `--mono`), so switching is: import `tokens.css`, delete the inline `:root` block, then swap hard-coded fonts and colours for tokens. Do this in one focused commit, since those two files are shared with other sessions.
+`index.html` and `lab.html` each define their own `:root` tokens inline. `src/tokens.css` reuses the same names (`--cream`, `--pink`, `--green`, `--ink`, `--mono`), so switching is: import `tokens.css`, delete the inline `:root` block, then swap hard-coded fonts and colours for tokens and apply the fix in "Known mismatch". Do this in one focused commit, since those two files are shared with other sessions.
 
 ## Working agreement
 
