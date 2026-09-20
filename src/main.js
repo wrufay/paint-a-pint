@@ -9,6 +9,7 @@ import { AcrylicPainter, initAcrylicUI } from './acrylic-painter.js';
 import { addPaintProps, TABLE } from './props.js';
 import { addTray3D } from './tray3d.js';
 import { ChairPhysics } from './chair.js';
+import { typeIn } from './typing.js';
 
 const BG = 0x1c1915;
 const app = document.getElementById('app');
@@ -97,6 +98,7 @@ const uploadPaint = () => { if (painter.syncMaps()) { paintTex.needsUpdate = tru
 // underneath, and the easel shows it again as soon as you are back in the room.
 let onEasel = null;   // the wall frame whose painting is on the easel, or null when the easel shows the live canvas
 const hintEl = document.getElementById('hint'), HINT = hintEl ? hintEl.textContent : '';
+if (hintEl) typeIn(hintEl, HINT.trim(), { delay: 700 });   // types itself in once the room is up
 function showOnEasel(slot) {
   if (!slot.easelTex) { const t = new THREE.CanvasTexture(slot.canvas); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; slot.easelTex = t; }
   world.canvasMat.map = slot.easelTex; world.canvasMat.normalMap = null; world.canvasMat.needsUpdate = true;
@@ -109,20 +111,69 @@ function showLive() {
   onEasel = null;
   poke(4); shadowWake = 3;
 }
+let viewSlot = null;   // the wall frame being viewed
 function viewPainting(slot) {
   if (mode !== 'room') return;
   mode = 'travelling'; hover(false); setHoverFrame(null);
-  showOnEasel(slot);
+  showOnEasel(slot); viewSlot = slot;
   travel(easelViewPose(), () => {
     mode = 'view'; document.body.classList.remove('travelling'); poke(6);
-    if (hintEl) hintEl.textContent = '✦ viewing a painting · click anywhere or press Esc to go back';
+    if (hintEl) {   // the bottom text, with a delete button in it (the text itself ignores the pointer, the button does not)
+      const msg = document.createElement('span'); msg.textContent = '✦ viewing a painting · click anywhere or press Esc to go back';
+      const del = document.createElement('button');
+      del.className = 'btn'; del.textContent = 'delete'; del.title = 'take this painting off the wall';
+      del.style.cssText = 'width:auto;margin:0;padding:4px 12px;font-size:var(--text-xs);color:var(--terracotta);border-color:var(--terracotta);pointer-events:auto;';
+      del.onclick = () => confirmDelete(slot);
+      hintEl.replaceChildren(msg, del); hintEl.style.cssText = 'display:flex;align-items:center;gap:12px;';
+      typeIn(msg, null, { speed: 22 });
+    }
   });
 }
-function leaveView() {
+function leaveView(after) {
   if (mode !== 'view') return;
   mode = 'travelling';
-  if (hintEl) hintEl.textContent = HINT;
-  travel(homePose(), () => { mode = 'room'; document.body.classList.remove('travelling'); showLive(); poke(6); });
+  if (hintEl) { hintEl.textContent = HINT; hintEl.style.cssText = ''; }
+  travel(homePose(), () => {
+    mode = 'room'; viewSlot = null; document.body.classList.remove('travelling'); showLive(); poke(6);
+    if (hintEl) typeIn(hintEl, HINT.trim(), { delay: 250 });   // the hint comes back typing, once it is visible again
+    if (after) after();
+  });
+}
+
+// ── deleting a hung painting: "are you sure?" first ─────────────────────────────────────────────────────────────────────
+// Built from the card's own look (cream, dashed pink border, washi tape, ultramarine heading, the terracotta primary button). It shows the
+// painting it is about to delete, and the safe button ("keep it") has the focus, so a stray Enter does not delete anything.
+let confirmEl = null;
+function closeConfirm() { if (confirmEl) confirmEl.style.display = 'none'; }
+function confirmDelete(slot) {
+  if (!confirmEl) {
+    confirmEl = document.createElement('div');
+    confirmEl.style.cssText = 'position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(28,25,21,.55);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);';
+    confirmEl.addEventListener('pointerdown', (e) => { if (e.target === confirmEl) closeConfirm(); });   // a click on the dim area means "keep it"
+    document.body.appendChild(confirmEl);
+  }
+  const box = document.createElement('div');
+  box.className = 'note'; box.setAttribute('role', 'alertdialog'); box.setAttribute('aria-label', 'Delete this painting?');
+  box.style.cssText = 'width:min(340px,90vw);padding:26px 22px 18px;border:5px dashed var(--pink);background:var(--cream);color:var(--ink);';
+  const h = document.createElement('h2');
+  h.textContent = 'DELETE THIS PAINTING?'; h.style.cssText = 'margin:0 0 12px;color:var(--ultramarine);font-size:var(--text-lg);letter-spacing:.08em;';
+  const thumb = document.createElement('canvas');   // a small look at what is about to go
+  thumb.width = 260; thumb.height = Math.round(260 * slot.canvas.height / slot.canvas.width);
+  thumb.getContext('2d').drawImage(slot.canvas, 0, 0, thumb.width, thumb.height);
+  thumb.style.cssText = 'display:block;width:100%;height:auto;margin:0 0 12px;border-radius:var(--radius-chip);box-shadow:0 0 0 1.5px var(--line);';
+  const p = document.createElement('p');
+  p.textContent = "It comes off the wall for good. This can't be undone."; p.style.cssText = 'margin:0 0 14px;font-size:var(--text-sm);line-height:1.5;color:var(--ink-soft);';
+  const row = document.createElement('div'); row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;';
+  const keep = document.createElement('button'); keep.className = 'btn'; keep.textContent = 'keep it'; keep.style.marginTop = '0'; keep.onclick = closeConfirm;
+  const del = document.createElement('button'); del.className = 'btn primary'; del.textContent = 'delete'; del.style.marginTop = '0';
+  del.onclick = () => {
+    closeConfirm();
+    leaveView(() => { setHoverFrame(null); world.unhang(slot); slot.popT = performance.now(); poke(4); shadowWake = 3; });   // fly back, then the frame empties with a little pop
+  };
+  row.append(keep, del);
+  box.append(h, thumb, p, row);
+  confirmEl.replaceChildren(box); confirmEl.style.display = 'flex';
+  keep.focus();
 }
 
 // ── the easel lies flat on the desk while you paint (bird's-eye view), and stands up again in the room ──
@@ -245,6 +296,8 @@ function enterPaint() {
     document.body.classList.remove('travelling'); document.body.classList.add('painting');
     layoutPaper();
     paintEl.classList.add('on');
+    const escEl = document.getElementById('esc');   // the "esc" line types in the first time the card opens
+    if (escEl && !escEl.dataset.typed) { escEl.dataset.typed = '1'; typeIn(escEl, null, { delay: 500, speed: 22 }); }
     poke(6);
   }, { from: easelUp, to: easelFlat, legs: false });
 }
@@ -298,7 +351,11 @@ function leavePaint(hang = true) {
 }
 
 const ui = initAcrylicUI(painter, { onBack: () => leavePaint(true), view, isPainting: () => mode === 'paint' });
-addEventListener('keydown', (e) => { if (e.key === 'Escape') { leavePaint(false); leaveView(); } });
+addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (confirmEl && confirmEl.style.display !== 'none') { closeConfirm(); return; }   // Esc on the dialog means "keep it", and stays in the view
+  leavePaint(false); leaveView();
+});
 
 // ── picking ──────────────────────────────────────────────────────────────────
 const ray = new THREE.Raycaster();
@@ -622,4 +679,4 @@ resize();
 requestAnimationFrame(frame);
 
 // tiny hook for automated screenshots / debugging
-window.__paint = { viewPainting, leaveView, showOnEasel, showLive, get onEasel() { return onEasel; }, orbit, chairPhys, enterPaint, leavePaint, painter, world, camera, renderer, uploadPaint, ui, get mode() { return mode; }, get deskMode() { return deskMode; } };
+window.__paint = { confirmDelete, viewPainting, leaveView, showOnEasel, showLive, get onEasel() { return onEasel; }, orbit, chairPhys, enterPaint, leavePaint, painter, world, camera, renderer, uploadPaint, ui, get mode() { return mode; }, get deskMode() { return deskMode; } };

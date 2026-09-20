@@ -346,7 +346,7 @@ export function buildRoom(scene) {
       box(g, w + 0.1, h + 0.1, 0.03, std(0xf7f2e6), 0, 0, 0, { r: 0.006 });
       const art = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: landscapeTex(), roughness: 0.9 }));
       art.position.z = 0.017; art.receiveShadow = true; g.add(art);
-      frames.push({ group: g, art, w, h, filled: false, popT: -1 });
+      frames.push({ group: g, art, w, h, filled: false, popT: -1, placeholder: art.material.map });   // (placeholder: the stand-in print, for when a painting is taken down)
     } else if (c % 2 === 1) { // photobooth strip: four colour blocks
       box(g, 0.2, 0.62, 0.02, M.white, 0, 0, 0, { r: 0.004 });
       for (let k = 0; k < 4; k++) plane(g, 0.15, 0.12, new THREE.MeshStandardMaterial({ color: pick(pastel), roughness: 0.9 }), 0, 0.22 - k * 0.145, 0.0115);
@@ -369,6 +369,14 @@ export function buildRoom(scene) {
     slot.canvas = canvas;   // the whole painting, uncropped, so it can be shown on the easel (main.js)
     slot.easelTex = null;
     return slot;
+  }
+  // take a painting down: the frame goes back to its stand-in print and is free for the next painting
+  function unhang(slot) {
+    const m = slot.art.material;
+    if (m.map && m.map !== slot.placeholder) m.map.dispose();
+    if (slot.easelTex) slot.easelTex.dispose();
+    m.map = slot.placeholder; m.color.set(0xffffff); m.emissive.setRGB(0, 0, 0); m.needsUpdate = true;
+    slot.filled = false; slot.canvas = null; slot.easelTex = null;
   }
 
   // sticky note + handwritten sheets on the plain left wall
@@ -420,7 +428,7 @@ export function buildRoom(scene) {
   // the window is behind everything, so light the camera-facing sides with a warm frontal fill
   const fill = new THREE.DirectionalLight(0xfff0d8, 0.85); fill.position.set(7, 6, 9); scene.add(fill);
 
-  return { room, easel, canvasFace, canvasMat, easelHit, CW, CH, frames, hang, sun, hemi, fill, glowLights, stringLights, reflector, oldPalette,
+  return { room, easel, canvasFace, canvasMat, easelHit, CW, CH, frames, hang, unhang, sun, hemi, fill, glowLights, stringLights, reflector, oldPalette,
     // for dragging the chair around (src/chair.js): the chair itself and what it can bump into, as [x0, x1, z0, z1] on the floor
     chair, chairRects: [[DESK_L, DESK_R, -3.9, -2.4], [BED_X - BED_W / 2, BED_X + BED_W / 2, BED_Z0, BED_Z1]] };
 }

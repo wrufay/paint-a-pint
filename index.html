@@ -1,155 +1,564 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
-  <title>paint-a-pint</title>
-  <link rel="icon" href="/favicon.ico" sizes="any" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/src/tokens.css" />
-  <link rel="stylesheet" href="/src/fonts.css" />
-  <style>
-    * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; background: var(--backdrop); overflow: hidden; font-family: var(--font-ui); color: var(--ink); }
-    #app { position: fixed; inset: 0; }
-    #app canvas { display: block; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"
+    />
+    <title>paint-a-pint</title>
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="stylesheet" href="/src/tokens.css" />
+    <link rel="stylesheet" href="/src/fonts.css" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: var(--backdrop);
+        overflow: hidden;
+        font-family: var(--font-ui);
+        color: var(--ink);
+      }
+      #app {
+        position: fixed;
+        inset: 0;
+      }
+      #app canvas {
+        display: block;
+        touch-action: none;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+      }
 
-    .note {
-      position: relative; background: var(--cream); border-radius: var(--radius-card);
-      box-shadow: 0 6px 18px rgba(0,0,0,.35);
-    }
-    .note::before { /* washi tape */
-      content: ""; position: absolute; top: -9px; left: 50%; width: 64px; height: 18px;
-      transform: translateX(-50%) rotate(-2deg); background: var(--tape-pink);
-      clip-path: polygon(0 10%, 4% 0, 8% 12%, 12% 0, 92% 0, 96% 12%, 100% 0, 100% 90%, 96% 100%, 92% 88%, 88% 100%, 8% 100%, 4% 88%, 0 100%);
-    }
+      .note {
+        position: relative;
+        background: var(--cream);
+        border-radius: var(--radius-card);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+      }
+      .note::before {
+        /* washi tape */
+        content: "";
+        position: absolute;
+        top: -9px;
+        left: 50%;
+        width: 64px;
+        height: 18px;
+        transform: translateX(-50%) rotate(-2deg);
+        background: var(--tape-pink);
+        clip-path: polygon(
+          0 10%,
+          4% 0,
+          8% 12%,
+          12% 0,
+          92% 0,
+          96% 12%,
+          100% 0,
+          100% 90%,
+          96% 100%,
+          92% 88%,
+          88% 100%,
+          8% 100%,
+          4% 88%,
+          0 100%
+        );
+      }
 
-    #title { position: fixed; top: 22px; left: 22px; padding: 12px 18px 10px; font-weight: var(--weight-bold); letter-spacing: var(--tracking-caps); font-size: var(--text-sm); transition: opacity .4s; }
-    #title small { display: block; font-weight: var(--weight-regular); letter-spacing: .04em; color: var(--ink-soft); margin-top: 3px; font-size: var(--text-xs); }
-    #hint {
-      position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); padding: 9px 16px;
-      background: rgba(251,247,238,.92); border-radius: var(--radius-pill); font-size: var(--text-sm); letter-spacing: .06em;
-      box-shadow: 0 4px 14px rgba(0,0,0,.3); transition: opacity .4s; pointer-events: none;
-    }
-    body.painting #title, body.painting #hint, body.travelling #title, body.travelling #hint { opacity: 0; }
+      #title {
+        position: fixed;
+        top: 22px;
+        left: 22px;
+        padding: 12px 18px 10px;
+        font-weight: var(--weight-bold);
+        letter-spacing: var(--tracking-caps);
+        font-size: var(--text-sm);
+        transition: opacity 0.4s;
+      }
+      #title small {
+        display: block;
+        font-weight: var(--weight-regular);
+        letter-spacing: 0.04em;
+        color: var(--ink-soft);
+        margin-top: 3px;
+        font-size: var(--text-xs);
+      }
+      #hint {
+        position: fixed;
+        left: 50%;
+        bottom: 26px;
+        transform: translateX(-50%);
+        padding: 9px 16px;
+        background: rgba(251, 247, 238, 0.92);
+        border-radius: var(--radius-pill);
+        font-size: var(--text-sm);
+        letter-spacing: 0.06em;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+        transition: opacity 0.4s;
+        pointer-events: none;
+      }
+      /* typing animation (src/typing.js): the untyped rest keeps its space but stays invisible, so nothing resizes */
+      .tw-rest {
+        visibility: hidden;
+      }
+      .tw-typing::after {
+        content: '';
+        display: inline-block;
+        width: 1.5px;
+        height: 1em;
+        margin: 0 -1.5px 0 1px;
+        background: currentColor;
+        vertical-align: -0.14em;
+        animation: tw-blink 0.9s steps(1) infinite;
+      }
+      @keyframes tw-blink {
+        50% {
+          opacity: 0;
+        }
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+      body.painting #title,
+      body.painting #hint,
+      body.travelling #title,
+      body.travelling #hint {
+        opacity: 0;
+      }
 
-    #paint { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity .35s; }
-    #paint.on { opacity: 1; }
-    #paint.on > * { pointer-events: auto; }
-    #paper {
-      position: absolute; background: var(--paper); touch-action: none; cursor: none;
-      box-shadow: inset 0 0 22px rgba(90,60,30,.18);
-    }
-    #paper canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-    #grain { mix-blend-mode: multiply; pointer-events: none; opacity: .9; }
+      #paint {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.35s;
+      }
+      #paint.on {
+        opacity: 1;
+      }
+      #paint.on > * {
+        pointer-events: auto;
+      }
+      #paper {
+        position: absolute;
+        background: var(--paper);
+        touch-action: none;
+        cursor: none;
+        box-shadow: inset 0 0 22px rgba(90, 60, 30, 0.18);
+      }
+      #paper canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      #grain {
+        mix-blend-mode: multiply;
+        pointer-events: none;
+        opacity: 0.9;
+      }
 
-    #card {
-      position: absolute; left: 26px; bottom: 18px; width: 236px; padding: 22px 18px 16px;   /* low on the left (the sun falls on the right); it can be dragged (acrylic-painter.js) */
-      border: 5px dashed var(--pink); background: var(--cream);
-    }
-    #card h2 { margin: 0 0 12px; color: var(--ultramarine); font-size: var(--text-lg); letter-spacing: .08em; }
-    #swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
-    .sw { width: 100%; aspect-ratio: 1; border-radius: 50%; border: 2px solid rgba(0,0,0,.18); cursor: pointer; padding: 0; transition: transform .12s; }
-    .sw:hover { transform: scale(1.08); }
-    .sw.sel { outline: 3px solid var(--green); outline-offset: 2px; }
-    .row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: var(--text-sm); }
-    .row label { min-width: 34px; }
-    input[type=range] { flex: 1; accent-color: var(--green); }
-    .btn {
-      font: inherit; font-size: var(--text-sm); letter-spacing: var(--tracking-btn); color: var(--ink); background: #fff; cursor: pointer;
-      border: var(--border-btn); border-radius: var(--radius-pill); padding: 7px 10px; width: 100%; margin-top: 8px;
-    }
-    .btn:hover { background: var(--butter); }
-    .btn.sel { background: var(--ink); color: var(--cream); }
-    .btn.primary { background: var(--terracotta); border-color: var(--terracotta); color: var(--cream); font-weight: var(--weight-bold); }
-    .btn.primary:hover { filter: brightness(1.06); }
-    /* card layout: main controls, a dashed rule, then a compact 3-column toolbar (see docs/design/DESIGN.md, "Paint card") */
-    .card-tools { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 0 0 12px; }
-    .card-tools .btn { margin-top: 0; padding: 6px 4px; font-size: var(--text-xs); letter-spacing: 0; white-space: nowrap; }
-    .card-tools.ruled { padding-top: 12px; border-top: 1.5px dashed var(--line); }
-    .card-tools.four { grid-template-columns: repeat(4, 1fr); }
-    .card-tools.four .btn { padding-left: 2px; padding-right: 2px; }
-    .btn.block { margin: 0 0 12px; }
-    #esc { font-size: var(--text-xs); color: var(--ink-soft); margin: 10px 0 0; text-align: center; }
+      #card {
+        position: absolute;
+        left: 26px;
+        bottom: 18px;
+        width: 236px;
+        padding: 22px 18px 16px; /* low on the left (the sun falls on the right); it can be dragged (acrylic-painter.js) */
+        border: 5px dashed var(--pink);
+        background: var(--cream);
+      }
+      #card h2 {
+        margin: 0 0 12px;
+        color: var(--ultramarine);
+        font-size: var(--text-lg);
+        letter-spacing: 0.08em;
+      }
+      #swatches {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+      .sw {
+        width: 100%;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        border: 2px solid rgba(0, 0, 0, 0.18);
+        cursor: pointer;
+        padding: 0;
+        transition: transform 0.12s;
+      }
+      .sw:hover {
+        transform: scale(1.08);
+      }
+      .sw.sel {
+        outline: 3px solid var(--green);
+        outline-offset: 2px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        font-size: var(--text-sm);
+      }
+      .row label {
+        min-width: 34px;
+      }
+      input[type="range"] {
+        flex: 1;
+        accent-color: var(--green);
+      }
+      .btn {
+        font: inherit;
+        font-size: var(--text-sm);
+        letter-spacing: var(--tracking-btn);
+        color: var(--ink);
+        background: #fff;
+        cursor: pointer;
+        border: var(--border-btn);
+        border-radius: var(--radius-pill);
+        padding: 7px 10px;
+        width: 100%;
+        margin-top: 8px;
+      }
+      .btn:hover {
+        background: var(--butter);
+      }
+      .btn.sel {
+        background: var(--ink);
+        color: var(--cream);
+      }
+      .btn.primary {
+        background: var(--terracotta);
+        border-color: var(--terracotta);
+        color: var(--cream);
+        font-weight: var(--weight-bold);
+      }
+      .btn.primary:hover {
+        filter: brightness(1.06);
+      }
+      /* card layout: main controls, a dashed rule, then a compact 3-column toolbar (see docs/design/DESIGN.md, "Paint card") */
+      .card-tools {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        margin: 0 0 12px;
+      }
+      .card-tools .btn {
+        margin-top: 0;
+        padding: 6px 4px;
+        font-size: var(--text-xs);
+        letter-spacing: 0;
+        white-space: nowrap;
+      }
+      .card-tools.ruled {
+        padding-top: 12px;
+        border-top: 1.5px dashed var(--line);
+      }
+      .card-tools.four {
+        grid-template-columns: repeat(4, 1fr);
+      }
+      .card-tools.four .btn {
+        padding-left: 2px;
+        padding-right: 2px;
+      }
+      .btn.block {
+        margin: 0 0 12px;
+      }
+      #esc {
+        font-size: var(--text-xs);
+        color: var(--ink-soft);
+        margin: 10px 0 0;
+        text-align: center;
+      }
 
-    #cursor {
-      position: fixed; left: 0; top: 0; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%;
-      border: 1.5px solid rgba(40,30,25,.85); box-shadow: 0 0 0 1px rgba(255,255,255,.7); pointer-events: none; opacity: 0; z-index: 9;
-    }
+      #cursor {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 20px;
+        height: 20px;
+        margin: -10px 0 0 -10px;
+        border-radius: 50%;
+        border: 1.5px solid rgba(40, 30, 25, 0.85);
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7);
+        pointer-events: none;
+        opacity: 0;
+        z-index: 9;
+      }
 
+      /* how-to modal: shown once after the camera arrives (src/howto.js), and again from the ? on the card. See docs/design/DESIGN.md, "How-to modal". */
+      #howto {
+        position: fixed;
+        inset: 0;
+        z-index: 30;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: color-mix(in srgb, var(--backdrop) 64%, transparent);
+        animation: howto-in 0.28s ease-out;
+      }
+      #howto[hidden] {
+        display: none;
+      }
+      .howto-card {
+        width: min(100%, 440px);
+        border: 5px dashed var(--pink);
+        padding: 30px 30px 22px;
+        animation: howto-rise 0.32s ease-out;
+      }
+      .howto-card h2 {
+        font-family: var(--font-display);
+        font-weight: var(--weight-regular);
+        font-size: var(--text-xl);
+        color: var(--ultramarine);
+        margin: 0 0 18px;
+      }
+      .howto-card ol {
+        list-style: none;
+        margin: 0 0 20px;
+        padding: 0;
+        display: grid;
+        gap: 16px;
+        counter-reset: step;
+      }
+      .howto-card li {
+        display: grid;
+        grid-template-columns: 28px 1fr;
+        align-items: baseline;
+        counter-increment: step;
+      }
+      .howto-card li::before {
+        content: counter(step) ".";
+        font-family: var(--font-display);
+        font-size: var(--text-lg);
+        color: var(--ultramarine);
+      }
+      .howto-card li b {
+        display: block;
+        font-size: var(--text-lg);
+        font-weight: var(--weight-bold);
+        margin-bottom: 2px;
+      }
+      .howto-card li span {
+        font-size: var(--text-base);
+        line-height: 1.5;
+      }
+      .howto-card .btn.primary {
+        margin-top: 0;
+        padding: 9px 12px;
+        font-size: var(--text-base);
+      }
+      .howto-card .btn:focus-visible {
+        outline: 3px solid var(--ultramarine);
+        outline-offset: 3px;
+      }
+      kbd {
+        font: inherit;
+        font-size: var(--text-xs);
+        font-weight: var(--weight-bold);
+        border: var(--border-btn);
+        border-radius: var(--radius-pill);
+        background: #fff;
+        padding: 1px 8px;
+        margin: 0 1px;
+      }
+      @media (hover: none) {
+        .kb {
+          display: none;
+        }
+      } /* touch: there is no keyboard to press, so the key hints go */
+      @keyframes howto-in {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes howto-rise {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      /* closing: the same two moves in reverse, then src/howto.js hides it. Clicks pass through while it fades. */
+      #howto.closing {
+        animation: howto-out 0.22s ease-in forwards;
+        pointer-events: none;
+      }
+      #howto.closing .howto-card {
+        animation: howto-sink 0.22s ease-in forwards;
+      }
+      @keyframes howto-out {
+        from {
+          opacity: 1;
+        }
+        to {
+          opacity: 0;
+        }
+      }
+      @keyframes howto-sink {
+        from {
+          opacity: 1;
+          transform: none;
+        }
+        to {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #howto,
+        .howto-card,
+        #howto.closing,
+        #howto.closing .howto-card {
+          animation: none;
+        }
+      }
+      .help {
+        position: absolute;
+        top: 16px;
+        right: 14px;
+        width: 26px;
+        height: 26px;
+        padding: 0;
+        line-height: 1;
+        border: var(--border-btn);
+        border-radius: 50%;
+        background: #fff;
+        color: var(--ink);
+        font: inherit;
+        font-size: var(--text-sm);
+        font-weight: var(--weight-bold);
+        cursor: pointer;
+      }
+      .help:hover {
+        background: var(--butter);
+      }
 
-    /* how-to modal: shown once after the camera arrives (src/howto.js), and again from the ? on the card. See docs/design/DESIGN.md, "How-to modal". */
-    #howto { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 24px;
-             background: color-mix(in srgb, var(--backdrop) 64%, transparent); animation: howto-in .28s ease-out; }
-    #howto[hidden] { display: none; }
-    .howto-card { width: min(100%, 440px); border: 5px dashed var(--pink); padding: 30px 30px 22px; animation: howto-rise .32s ease-out; }
-    .howto-card h2 { font-family: var(--font-display); font-weight: var(--weight-regular); font-size: var(--text-xl); color: var(--ultramarine); margin: 0 0 18px; }
-    .howto-card ol { list-style: none; margin: 0 0 20px; padding: 0; display: grid; gap: 16px; counter-reset: step; }
-    .howto-card li { display: grid; grid-template-columns: 28px 1fr; align-items: baseline; counter-increment: step; }
-    .howto-card li::before { content: counter(step) "."; font-family: var(--font-display); font-size: var(--text-lg); color: var(--ultramarine); }
-    .howto-card li b { display: block; font-size: var(--text-lg); font-weight: var(--weight-bold); margin-bottom: 2px; }
-    .howto-card li span { font-size: var(--text-base); line-height: 1.5; }
-    .howto-card .btn.primary { margin-top: 0; padding: 9px 12px; font-size: var(--text-base); }
-    .howto-card .btn:focus-visible { outline: 3px solid var(--ultramarine); outline-offset: 3px; }
-    kbd { font: inherit; font-size: var(--text-xs); font-weight: var(--weight-bold); border: var(--border-btn); border-radius: var(--radius-pill); background: #fff; padding: 1px 8px; margin: 0 1px; }
-    @media (hover: none) { .kb { display: none; } }   /* touch: there is no keyboard to press, so the key hints go */
-    @keyframes howto-in { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes howto-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-    /* closing: the same two moves in reverse, then src/howto.js hides it. Clicks pass through while it fades. */
-    #howto.closing { animation: howto-out .22s ease-in forwards; pointer-events: none; }
-    #howto.closing .howto-card { animation: howto-sink .22s ease-in forwards; }
-    @keyframes howto-out { from { opacity: 1; } to { opacity: 0; } }
-    @keyframes howto-sink { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(10px); } }
-    @media (prefers-reduced-motion: reduce) { #howto, .howto-card, #howto.closing, #howto.closing .howto-card { animation: none; } }
-    .help { position: absolute; top: 16px; right: 14px; width: 26px; height: 26px; padding: 0; line-height: 1; border: var(--border-btn); border-radius: 50%;
-            background: #fff; color: var(--ink); font: inherit; font-size: var(--text-sm); font-weight: var(--weight-bold); cursor: pointer; }
-    .help:hover { background: var(--butter); }
+      @media (max-aspect-ratio: 5/4) {
+        #card {
+          left: auto;
+          right: 50%;
+          transform: translateX(50%);
+          top: auto;
+          bottom: 14px;
+          width: min(92vw, 420px);
+          padding-top: 18px;
+        }
+        #swatches {
+          grid-template-columns: repeat(6, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
 
-    @media (max-aspect-ratio: 5/4) {
-      #card { left: auto; right: 50%; transform: translateX(50%); top: auto; bottom: 14px; width: min(92vw, 420px); padding-top: 18px; }
-      #swatches { grid-template-columns: repeat(6, 1fr); }
-    }
-  </style>
-</head>
-<body>
-  <div id="app"></div>
-
-  <div id="title" class="note">PAINT-A-PINT<small>a tiny painting room</small></div>
-  <div id="hint">✦ click the easel to paint</div>
-
-  <div id="paint">
-    <div id="paper">
-      <canvas id="paint-canvas"></canvas>
-      <canvas id="grain"></canvas>
+    <div id="title" class="note">
+      paint-a-pint 🪣<small>welcome!</small>
     </div>
-    <aside id="card" class="note">
-      <h2>PAINT</h2>
-      <button class="help" id="howto-open" type="button" aria-label="how to paint" title="how to paint">?</button>
-      <div id="swatches"></div>
-      <div class="row"><label for="size">size</label><input id="size" type="range" min="6" max="70" value="26" /></div>
-      <button class="btn" id="undo">undo</button>
-      <button class="btn" id="clear">clear</button>
-      <button class="btn" id="dry">dry now</button>
-      <button class="btn primary" id="back">hang it up &amp; go back</button>
-      <p id="esc">esc works too</p>
-    </aside>
-  </div>
-  <div id="cursor"></div>
+    <div id="hint">✱ click the easel to start</div>
 
-  <div id="howto" role="dialog" aria-modal="true" aria-labelledby="howto-title" hidden>
-    <div class="howto-card note">
-      <h2 id="howto-title">how to paint</h2>
-      <ol>
-        <li><div><b>pick a paint</b><span>pick a colour on the card, or a tube on the desk.<span class="kb"> keys <kbd>1</kbd>&ndash;<kbd>9</kbd> work too.</span></span></div></li>
-        <li><div><b>drag to paint</b><span>wet paint blends, dry paint covers, and thick paint keeps its ridges.<span class="kb"> resize with <kbd>[</kbd> <kbd>]</kbd>.</span></span></div></li>
-        <li><div><b>hang it up</b><span>when you&rsquo;re happy, hit hang it up &amp; go back to put it on the wall.<span class="kb"> <kbd>esc</kbd> leaves it on the easel.</span></span></div></li>
-      </ol>
-      <button class="btn primary" id="howto-go" type="button">start painting</button>
+    <div id="paint">
+      <div id="paper">
+        <canvas id="paint-canvas"></canvas>
+        <canvas id="grain"></canvas>
+      </div>
+      <aside id="card" class="note">
+        <h2>PAINT</h2>
+        <button
+          class="help"
+          id="howto-open"
+          type="button"
+          aria-label="how to paint"
+          title="how to paint"
+        >
+          ?
+        </button>
+        <div id="swatches"></div>
+        <div class="row">
+          <label for="size">size</label
+          ><input id="size" type="range" min="6" max="70" value="26" />
+        </div>
+        <button class="btn" id="undo">undo</button>
+        <button class="btn" id="clear">clear</button>
+        <button class="btn" id="dry">dry now</button>
+        <button class="btn primary" id="back">hang it up &amp; go back</button>
+        <p id="esc">esc works too</p>
+      </aside>
     </div>
-  </div>
+    <div id="cursor"></div>
 
-  <script type="module" src="/src/main.js"></script>
-  <script type="module" src="/src/howto.js"></script>
-</body>
+    <div
+      id="howto"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="howto-title"
+      hidden
+    >
+      <div class="howto-card note">
+        <h2 id="howto-title">how to paint</h2>
+        <ol>
+          <li>
+            <div>
+              <b>pick a paint</b
+              ><span
+                >pick a colour on the card, or a tube on the desk.<span
+                  class="kb"
+                >
+                  keys <kbd>1</kbd>&ndash;<kbd>9</kbd> work too.</span
+                ></span
+              >
+            </div>
+          </li>
+          <li>
+            <div>
+              <b>drag to paint</b
+              ><span
+                >wet paint blends, dry paint covers, and thick paint keeps its
+                ridges.<span class="kb">
+                  resize with <kbd>[</kbd> <kbd>]</kbd>.</span
+                ></span
+              >
+            </div>
+          </li>
+          <li>
+            <div>
+              <b>hang it up</b
+              ><span
+                >when you&rsquo;re happy, hit hang it up &amp; go back to put it
+                on the wall.<span class="kb">
+                  <kbd>esc</kbd> leaves it on the easel.</span
+                ></span
+              >
+            </div>
+          </li>
+        </ol>
+        <button class="btn primary" id="howto-go" type="button">
+          start painting
+        </button>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+    <script type="module" src="/src/howto.js"></script>
+  </body>
 </html>
