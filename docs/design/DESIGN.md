@@ -121,7 +121,7 @@ Kept in `docs/design/colour-specimen.html` for reference:
 `index.html` and `lab.html` link `src/tokens.css` and no longer define their own `:root` tokens. Palette hexes in their CSS are now tokens (backdrop, paper, tape, butter hover, muted-on-dark).
 
 Still hard-coded, deliberately or not yet:
-- `src/paint.js` exports `PAPER = '#f6efdd'`. It matches `--paper` today; keep them in sync, or read the value from the CSS variable if the two ever need to diverge.
+- `src/paint.js` is the old gouache painter and nothing imports it any more. Its `PAPER = '#f6efdd'` and 6-colour `PALETTE` are dead code: ignore them (delete the file when its owner agrees). The live paints are in `src/brush/paints.js`.
 - Neutral utilities in the pages: white button fills (`#fff`), shadow and cursor `rgba(...)` values, and the cream-with-alpha hint pill.
 - Scene colours in `room.js`, which are art, not UI.
 
