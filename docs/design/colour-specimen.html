@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>paint-a-pint colour specimen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=DM+Sans:wght@400;500;700&family=Nunito:wght@700&display=swap" rel="stylesheet">
+<style>
+  /* proposed tokens (mirrors the table in section 2): 10 tokens, 2 hues */
+  :root {
+    --cream: #fbf7ee; --paper: #f6efdd;
+    --ink: #4a3b34; --ink-soft: #756558;
+    --backdrop: #1c1915; --backdrop-lab: #2b2622; --muted-on-dark: #cdbfae;
+    --pink: #e58a8a; --green: #5fa88c; --green-deep: #357059;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--backdrop); color: var(--cream); font-family: var(--mono); }
+  body { padding: 32px 20px 80px; max-width: 1100px; margin: 0 auto; }
+  h1 { font: 400 13px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted-on-dark); margin: 0 0 6px; }
+  .lede { font-size: 12px; color: #a99b8b; margin: 0 0 8px; max-width: 74ch; line-height: 1.6; }
+  h2 { font: 400 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--pink); margin: 56px 0 4px; }
+  .role { font-size: 11px; color: #a99b8b; margin: 0 0 16px; max-width: 74ch; line-height: 1.6; }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .card { border-radius: 10px; padding: 20px 22px 18px; }
+  .card.light { background: var(--cream); color: var(--ink); }
+  .card.paper { background: var(--paper); color: var(--ink); }
+  .card.dark  { background: var(--backdrop-lab); color: var(--cream); border: 1px solid #3a342d; }
+  .tag { font: 400 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; opacity: .6; margin-bottom: 14px; display: flex; justify-content: space-between; gap: 8px; }
+  .note { font-size: 11px; opacity: .7; margin: 12px 0 0; line-height: 1.55; }
+  code { background: rgba(127,127,127,.18); padding: 1px 5px; border-radius: 3px; }
+
+  /* swatches */
+  .strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 10px; }
+  .sw { cursor: pointer; font-size: 10px; line-height: 1.4; }
+  .sw .chip9 { height: 62px; border-radius: 6px; box-shadow: inset 0 0 0 1px rgba(127,127,127,.28); margin-bottom: 6px; }
+  .sw .hex { letter-spacing: .03em; }
+  .sw .nm { font-weight: 700; }
+  .sw .meta { opacity: .6; }
+  .sw.copied .hex::after { content: "  copied"; color: var(--green); }
+  .badge { display: inline-block; font-size: 9px; letter-spacing: .06em; text-transform: uppercase; padding: 1px 5px; border-radius: 3px; margin-left: 4px; vertical-align: 1px; }
+  .badge.kept { background: rgba(95,168,140,.25); }
+  .badge.new  { background: rgba(229,138,138,.3); }
+
+  .grp { margin-bottom: 22px; }
+  .grp h3 { font: 400 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; opacity: .6; margin: 0 0 10px; }
+
+  /* mocks */
+  .wordmark { font-family: "Young Serif", Georgia, serif; font-size: 34px; line-height: 1.05; margin: 0 0 14px; }
+  .chip { position: relative; display: inline-block; background: #fff8e8; padding: 9px 16px 8px; border-radius: 3px; transform: rotate(-2deg);
+          box-shadow: 0 2px 0 rgba(74,59,52,.15), 0 6px 14px rgba(0,0,0,.12); color: var(--ink);
+          font: 700 12px "DM Sans", sans-serif; letter-spacing: .14em; text-transform: uppercase; margin-right: 12px; }
+  .chip::before { content: ""; position: absolute; top: -7px; left: 50%; width: 42px; height: 14px; margin-left: -21px; background: rgba(229,138,138,.65); transform: rotate(3deg); }
+  .chip.g::before { background: rgba(95,168,140,.6); }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; margin: 18px 0 14px; }
+  .btn { font: 400 12px "DM Sans", sans-serif; letter-spacing: .04em; border-radius: 999px; padding: 7px 14px; border: 1.5px solid; }
+  .on-light .btn { color: var(--ink); background: #fff; border-color: rgba(74,59,52,.35); }
+  .on-light .btn.acc { border-color: var(--pink); border-width: 2.5px; }
+  .on-light .btn.pri { background: var(--green-deep); border-color: var(--green-deep); color: var(--cream); font-weight: 700; }
+  .on-dark .btn { color: var(--cream); background: transparent; border-color: rgba(251,247,238,.45); }
+  .on-dark .btn.acc { border-color: var(--pink); border-width: 2.5px; }
+  .on-dark .btn.pri { background: var(--green); border-color: var(--green); color: var(--backdrop); font-weight: 700; }
+  .h-card { font: 700 18px "DM Sans", sans-serif; letter-spacing: .08em; margin: 0 0 10px; }
+  .body { font: 400 14px/1.55 "DM Sans", sans-serif; margin: 0 0 4px; }
+  .soft { font: 400 12px/1.5 "DM Sans", sans-serif; margin: 0; }
+  .on-light .soft { color: var(--ink-soft); }
+  .on-dark .soft { color: var(--muted-on-dark); }
+  .mini-tube { display: flex; gap: 12px; align-items: stretch; margin-top: 14px; font: 500 13px/1.25 "DM Sans", sans-serif; }
+  .mini-tube i { width: 46px; border-radius: 3px; display: block; box-shadow: inset 0 0 0 1px rgba(127,127,127,.3); }
+  .mini-tube b { font-weight: 700; }
+  .tape { display: inline-block; background: #efe6cf; padding: 6px 14px; transform: rotate(-1.5deg); border-top: 1px dashed rgba(74,59,52,.25); border-bottom: 1px dashed rgba(74,59,52,.25);
+          box-shadow: 0 1px 3px rgba(0,0,0,.12); color: #3d3a55; font: 700 13px "Nunito", sans-serif; letter-spacing: .06em; margin-top: 12px; }
+
+  /* the fix */
+  .fix { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .fix > div { border-radius: 8px; padding: 14px 14px 12px; background: #fff; box-shadow: inset 0 0 0 1px rgba(74,59,52,.12); }
+  .fix .lbl { font: 400 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; opacity: .6; margin-bottom: 10px; }
+  .fix .btn { border: 1.5px solid; font-weight: 700; }
+  .fix small { display: block; font: 400 10px var(--mono); margin-top: 10px; opacity: .75; line-height: 1.5; }
+
+  /* contrast table */
+  table { border-collapse: collapse; width: 100%; font-size: 11px; }
+  th { text-align: left; font-weight: 400; opacity: .55; letter-spacing: .08em; text-transform: uppercase; font-size: 10px; padding: 0 10px 8px 0; }
+  td { padding: 7px 10px 7px 0; border-top: 1px solid rgba(127,127,127,.22); vertical-align: middle; }
+  .pair { display: inline-flex; align-items: center; justify-content: center; width: 54px; height: 26px; border-radius: 4px; font: 700 12px "DM Sans", sans-serif; box-shadow: inset 0 0 0 1px rgba(127,127,127,.3); }
+  .ok  { color: #2f7a55; } .mid { color: #9a7410; } .bad { color: #b04a4a; }
+
+  .q { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; }
+  .pairN { display: flex; gap: 10px; margin: 12px 0 6px; }
+  .pairN .sw { flex: 1; }
+  footer { margin-top: 64px; font-size: 11px; color: #a99b8b; line-height: 1.7; }
+
+  /* ---- schemes + modes (section 6) ---- */
+  .ctrls { display: flex; gap: 22px; flex-wrap: wrap; margin: 0 0 14px; }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .seg .lab { font: 400 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; opacity: .6; margin-right: 4px; }
+  .seg button { font: 400 11px var(--mono); color: var(--cream); background: transparent; border: 1px solid rgba(251,247,238,.3); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--cream); color: var(--backdrop); border-color: var(--cream); }
+
+  /* a scheme = 4 values: --a action fill, --a-deep text/button on light, --a-night text/button on dark, --d decoration (tape, dashed border, selection ring) */
+  .board[data-scheme="fruit"]       { --a: #5fa88c; --a-deep: #357059; --a-night: #6fb198; --d: #e58a8a; }
+  .board[data-scheme="strawberry"]  { --a: #e58a8a; --a-deep: #a04552; --a-night: #e58a8a; --d: #e58a8a; }
+  .board[data-scheme="melon"]       { --a: #5fa88c; --a-deep: #357059; --a-night: #6fb198; --d: #5fa88c; }
+  .board[data-scheme="blueberry"]   { --a: #68a0d1; --a-deep: #376599; --a-night: #77aad6; --d: #68a0d1; }
+  .board[data-scheme="apricot"]     { --a: #efa06a; --a-deep: #9a4d1a; --a-night: #efa06a; --d: #efa06a; }
+  .board[data-mode="light"] { --bg: #f6efdd; --card: #fbf7ee; --tx: #4a3b34; --soft: #756558; --line: rgba(74,59,52,.35); --act: var(--a-deep); --act-on: #fbf7ee; --btn-bg: #fff; }
+  .board[data-mode="night"] { --bg: #232340; --card: #30305a; --tx: #fbf7ee; --soft: #cfcbe6; --line: rgba(251,247,238,.4); --act: var(--a-night); --act-on: #1c1915; --btn-bg: transparent; }
+  .board[data-mode="dark"]  { --bg: #1c1915; --card: #2b2622; --tx: #fbf7ee; --soft: #cdbfae; --line: rgba(251,247,238,.4); --act: var(--a-night); --act-on: #1c1915; --btn-bg: transparent; }
+
+  .board { border-radius: 12px; padding: 26px; background: var(--bg); color: var(--tx); }
+  .bcard { background: var(--card); border: 4px dashed var(--d); border-radius: 8px; padding: 22px 24px 20px; max-width: 560px; }
+  .bcard .wordmark { color: var(--tx); }
+  .bcard .chip::before { background: color-mix(in srgb, var(--d) 65%, transparent); }
+  .bcard .h-card { color: var(--act); margin: 20px 0 10px; }
+  .bcard .btn { color: var(--tx); background: var(--btn-bg); border-color: var(--line); }
+  .bcard .btn.pri { background: var(--act); border-color: var(--act); color: var(--act-on); font-weight: 700; }
+  .bcard .body { color: var(--tx); }
+  .bcard .soft { color: var(--soft); }
+  .bslider { display: flex; align-items: center; gap: 12px; margin: 14px 0 6px; font: 400 12px "DM Sans", sans-serif; color: var(--soft); }
+  .bslider .trk { flex: 1; height: 6px; border-radius: 3px; background: var(--line); position: relative; }
+  .bslider .trk i { display: block; height: 100%; width: 62%; border-radius: 3px; background: var(--act); }
+  .bslider .trk b { position: absolute; left: 62%; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: var(--act); box-shadow: 0 0 0 3px var(--card); }
+  .bdots { display: flex; gap: 10px; margin: 14px 0 4px; }
+  .bdots i { width: 26px; height: 26px; border-radius: 50%; display: block; box-shadow: inset 0 0 0 1px rgba(127,127,127,.35); }
+  .bdots i.on { box-shadow: 0 0 0 3px var(--d), inset 0 0 0 1px rgba(127,127,127,.35); transform: translateY(-3px); }
+  .bcard .mini-tube { color: var(--tx); }
+  .sc-lines { font: 400 10px/1.7 var(--mono); opacity: .8; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<h1>paint-a-pint / colour specimen</h1>
+<p class="lede">Reference page for choosing the project colours (docs only, not bundled by Vite). Click any swatch to copy its hex. Fonts load from Google Fonts, so you need to be online.</p>
+<p class="lede"><b>How the sampling works.</b> I clustered the pixels of 32 images (your paintings, desk photos, and the room inspo) in Lab colour space, keeping only the <i>colourful</i> pixels so walls and shadows don't drown the result. The percentages are each colour's share of those colourful pixels. These are phone photos and screenshots, so white balance and compression shift things: treat them as direction, not gospel.</p>
+<p class="lede"><b>Status:</b> the UI palette (section 2) is trimmed to <b>10 tokens and 2 hues</b>. The extra sampled colours are kept in section 5 as <i>parked</i>, not deleted. <b>New:</b> <a href="#schemes" style="color:var(--pink)">section 6</a> lets you try one-accent schemes and a night mode.</p>
+
+<!-- ============ 1 ============ -->
+<h2>1 · What your photos actually contain</h2>
+<p class="role">Three sources, three moods. The grey/brown neutrals dominate every frame; the strip below each title is what's left once those are removed.</p>
+
+<div class="grp card dark"><div class="tag"><span>Your paintings</span><span>17 images · canvas/progress + painting_examples</span></div><div class="strip" id="s-paintings"></div>
+<p class="note">Sky blues, an ultramarine, two leaf greens, warm sand and a terracotta brown. This is the impressionist target: what the player's own strokes should be able to reach.</p></div>
+
+<div class="grp card dark"><div class="tag"><span>Your desks</span><span>7 images · diorama/</span></div><div class="strip" id="s-desk"></div>
+<p class="note">Mahogany desk (the two big reds), wood and sand, a dusty blush, sage and moss from the trees outside, the blue mug.</p></div>
+
+<div class="grp card dark"><div class="tag"><span>Room inspo</span><span>8 images · Teracy screenshots</span></div><div class="strip" id="s-inspo"></div>
+<p class="note">Dusk indigo (the fridge backdrop, 30% of all colourful pixels), lamp khaki and butter, plant green, a dusty red. The lilac at the end is a tiny 0% cluster.</p></div>
+
+<div class="grp card dark"><div class="tag"><span>Dominant neutrals</span><span>hand-picked from the whole-image clusters</span></div><div class="strip" id="s-neutrals"></div>
+<p class="note">Warm all the way down. Note the darkest one, <code>#201d17</code>, is almost exactly the <code>#1c1915</code> the room page already uses as its backdrop.</p></div>
+
+<!-- ============ 2 ============ -->
+<h2>2 · Proposed UI palette: 10 tokens, 2 hues</h2>
+<p class="role">The app already runs on two accents: <b>green</b> for "active" (heading, slider, selection outline, primary button) and <b>pink</b> for decoration (dashed card border, selected-swatch ring). This keeps that. <span class="badge kept">kept</span> means it's already in the code, unchanged; <span class="badge new">new</span> marks the two additions: <code>--ink-soft</code> (a secondary-text colour the code doesn't have yet) and <code>--green-deep</code>. The chrome stays quiet on purpose: your tubes (below) should be the loudest colours on screen.</p>
+
+<div class="card light">
+  <div class="grp"><h3>Surfaces · light</h3><div class="strip" id="p-surface"></div></div>
+  <div class="grp"><h3>Ink · text on light</h3><div class="strip" id="p-ink"></div></div>
+  <div class="grp"><h3>Dark · backgrounds and text on dark</h3><div class="strip" id="p-night"></div></div>
+  <div class="grp" style="margin-bottom:0"><h3>Accents</h3><div class="strip" id="p-accent"></div></div>
+</div>
+
+<p class="role" style="margin-top:22px">For scale: the nine tubes currently in <code>src/brush/paints.js</code> (a copy of the hexes, the file is the source of truth). There's no green tube, so every leaf in a painting is a mix, which is one reason not to add more greens to the UI.</p>
+<div class="card dark"><div class="strip" id="p-tubes"></div></div>
+
+<!-- ============ 3 ============ -->
+<h2>3 · The palette in use</h2>
+<p class="role">The same components on three surfaces, using the chosen fonts (Young Serif, DM Sans, Nunito). The chip and tape stay paper-coloured everywhere: they're physical objects sitting in the scene, not themed UI. Primary buttons use <code>--green-deep</code> on light and plain <code>--green</code> on dark.</p>
+<div class="row">
+  <div class="card light on-light"><div class="tag"><span>on cream</span><span>--cream</span></div>
+    <p class="wordmark" style="color:var(--ink)">my waterloo room</p>
+    <span class="chip">Menu ▾</span><span class="chip g">Palette</span>
+    <p class="h-card" style="color:var(--green-deep);margin-top:22px">BRUSH LAB</p>
+    <div class="btns" style="margin-top:0"><span class="btn">clean brush</span><span class="btn acc">new canvas</span><span class="btn pri">dry: on</span></div>
+    <p class="body">Bristles shove open paint into ridges.</p><p class="soft">Secondary text uses --ink-soft.</p>
+    <div class="mini-tube"><i style="background:#b5332e"></i><div>PR112<br>Naphthol red medium <b>++ 396</b></div></div>
+  </div>
+  <div class="card paper on-light"><div class="tag"><span>on paper</span><span>--paper</span></div>
+    <p class="wordmark" style="color:var(--ink)">swiss alps</p>
+    <span class="chip g">Menu ▾</span><span class="chip">Palette</span>
+    <p class="h-card" style="color:var(--green-deep);margin-top:22px">BRUSH LAB</p>
+    <div class="btns" style="margin-top:0"><span class="btn">clean brush</span><span class="btn acc">new canvas</span><span class="btn pri">dry: on</span></div>
+    <p class="body">Let it dry a few minutes and it stops moving.</p><p class="soft">Secondary text uses --ink-soft.</p>
+    <span class="tape">W16.2 × L22.5 cm</span>
+  </div>
+  <div class="card dark on-dark"><div class="tag"><span>on backdrop</span><span>--backdrop-lab</span></div>
+    <p class="wordmark" style="color:var(--cream)">my home room</p>
+    <span class="chip">Menu ▾</span><span class="chip g">Palette</span>
+    <p class="h-card" style="color:var(--green);margin-top:22px">BRUSH LAB</p>
+    <div class="btns" style="margin-top:0"><span class="btn">clean brush</span><span class="btn acc">new canvas</span><span class="btn pri">dry: on</span></div>
+    <p class="body" style="color:var(--cream)">Wash the brush before you change colour.</p><p class="soft">Secondary text uses --muted-on-dark.</p>
+  </div>
+</div>
+
+<div class="card light on-light" style="margin-top:14px">
+  <div class="tag"><span>the fix · why --green-deep exists</span><span>current UI code vs proposed</span></div>
+  <div class="fix">
+    <div>
+      <div class="lbl">before (index.html today)</div>
+      <p class="h-card" style="color:#5fa88c;margin:0 0 10px">BRUSH LAB</p>
+      <span class="btn" style="background:#5fa88c;border-color:#5fa88c;color:#fff">dry: on</span>
+      <small>heading: green on cream <b>2.63:1</b><br>button: white on green <b>2.81:1</b><br>both fail the 4.5:1 needed for small text</small>
+    </div>
+    <div>
+      <div class="lbl">after (--green-deep)</div>
+      <p class="h-card" style="color:#357059;margin:0 0 10px">BRUSH LAB</p>
+      <span class="btn" style="background:#357059;border-color:#357059;color:#fbf7ee">dry: on</span>
+      <small>heading: on cream <b>5.44:1</b><br>button: cream on it <b>5.44:1</b><br>same hue family, still clearly your green</small>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 4 ============ -->
+<h2>4 · Contrast: what may be used as text</h2>
+<p class="role">Computed live in this page (WCAG 2.x). Small text needs 4.5:1. The rule that falls out: <b>pink and mint green are fills, borders and tape, never small text on light surfaces.</b> For coloured text or a filled button on light, use <code>--green-deep</code>.</p>
+<div class="card light"><table id="ctable"><thead><tr><th>sample</th><th>text</th><th>on</th><th>ratio</th><th>verdict</th></tr></thead><tbody></tbody></table></div>
+
+<!-- ============ 5 ============ -->
+<h2>5 · Decisions and parked colours</h2>
+<p class="role">One decision left in the palette itself, plus everything I cut, kept here so it isn't lost.</p>
+<div class="q">
+  <div class="card light"><div class="tag"><span>1 · the green's hue</span></div>
+    <div class="pairN"><div class="sw" data-hex="#5fa88c" data-name="mint (current)"></div><div class="sw" data-hex="#658a43" data-name="leaf (from paintings)"></div></div>
+    <p class="note" style="opacity:.85">Keep the cool mint (it's in the app and matches the inspo chair), or shift to the yellower leaf green your paintings and window trees use? If you pick leaf, <code>--green-deep</code> gets re-derived from it. Mint is friendlier next to the pink; leaf is the truer match to the photos.</p></div>
+  <div class="card light"><div class="tag"><span>2 · how deep is green-deep</span></div>
+    <div class="pairN" id="deeps"></div>
+    <p class="note" style="opacity:.85">I picked <code>#357059</code>: the lightest shade that passes 4.5:1 on <i>both</i> cream and paper. <code>#3a7d64</code> is brighter but drops to 4.26:1 on paper.</p></div>
+</div>
+
+<div class="card dark" style="margin-top:14px">
+  <div class="tag"><span>Parked: sampled, not tokens</span><span>revisit if rooms recolour the UI</span></div>
+  <div class="strip" id="parked"></div>
+  <p class="note">If you later want per-room accents (alps: sky + ultramarine; home: terracotta + rose) or an evening menu (dusk), these are the sampled starting points. Adding them later is cheap; carrying them now would mean extra accents with no current use.</p>
+</div>
+
+<!-- ============ 6 ============ -->
+<h2 id="schemes">6 · Schemes and night mode</h2>
+<p class="role">A <b>scheme</b> is one accent (or, for "fruit salad", the strawberry + melon pair with fixed jobs: pink is tape and decoration, green does every action). A <b>mode</b> is the surface: light (cream), night (a deep indigo taken from the inspo), or dark (your existing warm near-black). Pick any combination below; the board uses the app's real pieces: the dashed card border, taped chips, slider, and the selected-swatch ring.</p>
+
+<div class="ctrls">
+  <div class="seg" id="seg-scheme"><span class="lab">scheme</span></div>
+  <div class="seg" id="seg-mode"><span class="lab">mode</span></div>
+</div>
+
+<div class="board" id="board" data-scheme="fruit" data-mode="light">
+  <div class="bcard">
+    <p class="wordmark">my waterloo room</p>
+    <span class="chip">Menu ▾</span><span class="chip">Palette</span>
+    <p class="h-card">BRUSH LAB</p>
+    <div class="btns" style="margin:0 0 4px"><span class="btn">clean brush</span><span class="btn">new canvas</span><span class="btn pri">dry: on</span></div>
+    <div class="bslider"><span>brush size</span><div class="trk"><i></i><b></b></div></div>
+    <div class="bdots"><i style="background:#b5332e"></i><i class="on" style="background:#dfac46"></i><i style="background:#3c79b4"></i><i style="background:#601529"></i><i style="background:#f3f3ef"></i></div>
+    <p class="body">Bristles shove open paint into ridges.</p>
+    <p class="soft">Secondary text.</p>
+    <div class="mini-tube"><i style="background:#b5332e"></i><div>PR112<br>Naphthol red medium <b>++ 396</b></div></div>
+  </div>
+</div>
+
+<div class="row" id="scheme-cards" style="margin-top:14px"></div>
+
+<div class="card dark" style="margin-top:14px">
+  <div class="tag"><span>Night surfaces</span><span>tuned, not sampled</span></div>
+  <div class="strip" id="night-sw"></div>
+  <p class="note">The sampled dusk indigo <code>#404070</code> is too light to carry accents: strawberry falls to 3.8:1, melon to 3.4:1, blueberry to 3.5:1. So night mode uses two darker siblings, <code>#232340</code> for the page and <code>#30305a</code> for cards. On both, plus your warm dark, every night accent passes 4.5:1. The chip and tape stay paper-coloured in every mode because they're physical objects.</p>
+</div>
+
+<footer>
+  Sample data is embedded in this file (colourful-pixel clusters per source group, k-means in Lab space, k=9), generated by a one-off script that is not kept in the repo.<br>
+  Source images may move around while the repo is being reorganised, so this page deliberately embeds no thumbnails.
+</footer>
+
+<script>
+const SAMPLES = {"paintings": [{"hex": "#68a0d1", "share": 0.178}, {"hex": "#c7986e", "share": 0.142}, {"hex": "#4882c2", "share": 0.129}, {"hex": "#335295", "share": 0.124}, {"hex": "#658a43", "share": 0.113}, {"hex": "#49673a", "share": 0.104}, {"hex": "#834e31", "share": 0.072}, {"hex": "#9ab554", "share": 0.07}, {"hex": "#8b98cb", "share": 0.068}], "desk": [{"hex": "#784131", "share": 0.225}, {"hex": "#b29762", "share": 0.223}, {"hex": "#954a33", "share": 0.204}, {"hex": "#bc786a", "share": 0.095}, {"hex": "#957248", "share": 0.083}, {"hex": "#ebc28a", "share": 0.075}, {"hex": "#b3bd84", "share": 0.043}, {"hex": "#617540", "share": 0.03}, {"hex": "#5680af", "share": 0.022}], "inspo": [{"hex": "#404070", "share": 0.306}, {"hex": "#9b8354", "share": 0.253}, {"hex": "#856b43", "share": 0.152}, {"hex": "#cda774", "share": 0.081}, {"hex": "#cfc18c", "share": 0.073}, {"hex": "#63542c", "share": 0.067}, {"hex": "#60793b", "share": 0.039}, {"hex": "#994d42", "share": 0.027}, {"hex": "#bb85b3", "share": 0.003}]};
+
+const $ = (s) => document.querySelector(s);
+function hexToRgb(h) { h = h.replace('#',''); return [0,2,4].map(i => parseInt(h.slice(i,i+2),16)); }
+function lum(h) { const [r,g,b] = hexToRgb(h).map(v => { v/=255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055,2.4); }); return 0.2126*r+0.7152*g+0.0722*b; }
+function ratio(a,b) { let la=lum(a), lb=lum(b); if (la<lb) [la,lb]=[lb,la]; return (la+0.05)/(lb+0.05); }
+function verdict(r) { return r>=7 ? ['AAA','ok'] : r>=4.5 ? ['AA','ok'] : r>=3 ? ['large text / UI only','mid'] : ['fill only, not text','bad']; }
+
+function sw(hex, o={}) {
+  const d = document.createElement('div'); d.className = 'sw'; d.dataset.hex = hex;
+  d.innerHTML = `<div class="chip9" style="background:${hex}"></div>` +
+    (o.name ? `<div class="nm">${o.name}${o.badge ? `<span class="badge ${o.badge}">${o.badge}</span>` : ''}</div>` : '') +
+    `<div class="hex">${hex}</div>` + (o.meta ? `<div class="meta">${o.meta}</div>` : '');
+  d.addEventListener('click', () => { navigator.clipboard?.writeText(hex).catch(()=>{}); d.classList.add('copied'); setTimeout(()=>d.classList.remove('copied'),1200); });
+  return d;
+}
+function fill(sel, items) { const el = $(sel); items.forEach(i => el.appendChild(sw(i.hex, i))); }
+
+// 1. sampled
+for (const g of ['paintings','desk','inspo']) fill('#s-'+g, SAMPLES[g].map(c => ({hex:c.hex, meta:`${Math.round(c.share*100)}%`})));
+fill('#s-neutrals', ['#201d17','#372d20','#43342d','#736960','#a59a8e','#cdcfca','#e5caa5','#efe5cd','#fef9e9'].map(h => ({hex:h})));
+
+// 2. proposed tokens (10)
+fill('#p-surface', [
+  {hex:'#fbf7ee', name:'--cream', badge:'kept', meta:'cards, chips'},
+  {hex:'#f6efdd', name:'--paper', badge:'kept', meta:'canvas surface'},
+]);
+fill('#p-ink', [
+  {hex:'#4a3b34', name:'--ink', badge:'kept', meta:'9.99:1 on cream'},
+  {hex:'#756558', name:'--ink-soft', badge:'new', meta:'secondary text · 5.23:1 on cream'},
+]);
+fill('#p-night', [
+  {hex:'#1c1915', name:'--backdrop', badge:'kept', meta:'matches inspo #201d17'},
+  {hex:'#2b2622', name:'--backdrop-lab', badge:'kept', meta:'lab page'},
+  {hex:'#cdbfae', name:'--muted-on-dark', badge:'kept', meta:'9.72:1 on backdrop'},
+]);
+fill('#p-accent', [
+  {hex:'#e58a8a', name:'--pink', badge:'kept', meta:'fills, tape, borders'},
+  {hex:'#5fa88c', name:'--green', badge:'kept', meta:'fills, borders; text on dark only'},
+  {hex:'#357059', name:'--green-deep', badge:'new', meta:'text and buttons on light · 5.44:1 on cream'},
+]);
+fill('#p-tubes', [
+  ['titanium white','#f3f3ef'],['lemon yellow','#ead848'],['azo yellow','#dfac46'],['naples yellow','#d5cebd'],['naphthol red','#b5332e'],
+  ['permanent magenta','#601529'],['burnt sienna','#622b22'],["king's blue",'#3c79b4'],['prussian blue hue','#111424'],
+].map(([name,hex]) => ({hex, name})));
+
+// 4. contrast table
+const rows = [
+  ['ink','#4a3b34','#fbf7ee','cream'], ['ink','#4a3b34','#f6efdd','paper'],
+  ['ink-soft','#756558','#fbf7ee','cream'], ['ink-soft','#756558','#f6efdd','paper'],
+  ['green-deep','#357059','#fbf7ee','cream'], ['green-deep','#357059','#f6efdd','paper'],
+  ['pink','#e58a8a','#fbf7ee','cream'], ['green (mint)','#5fa88c','#fbf7ee','cream'],
+  ['cream','#fbf7ee','#357059','green-deep fill'], ['white (current button)','#ffffff','#5fa88c','green fill'],
+  ['ink','#4a3b34','#e58a8a','pink fill'], ['ink','#4a3b34','#5fa88c','green fill'],
+  ['cream','#fbf7ee','#1c1915','backdrop'], ['muted-on-dark','#cdbfae','#1c1915','backdrop'],
+  ['pink','#e58a8a','#1c1915','backdrop'], ['green (mint)','#5fa88c','#1c1915','backdrop'],
+  ['backdrop','#1c1915','#5fa88c','green fill (dark primary btn)'],
+];
+const tb = $('#ctable tbody');
+for (const [n,fg,bg,on] of rows) {
+  const r = ratio(fg,bg), [v,c] = verdict(r);
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td>${n} <code>${fg}</code></td><td><span class="pair" style="background:${bg};color:${fg}">Aa</span></td><td>${on} <code>${bg}</code></td><td>${r.toFixed(2)}:1</td><td class="${c}">${v}</td>`;
+  tb.appendChild(tr);
+}
+
+// 5. decisions
+document.querySelectorAll('.pairN .sw').forEach(el => { const h = el.dataset.hex; const d = sw(h, {name: el.dataset.name}); el.replaceWith(d); d.style.flex = '1'; });
+[['#3a7d64','4.57 cream · 4.26 paper'],['#357059','5.44 cream · 5.07 paper (picked)'],['#2f6650','6.26 cream · 5.84 paper']].forEach(([h,m]) => { const d = sw(h,{meta:m}); d.style.flex='1'; $('#deeps').appendChild(d); });
+fill('#parked', [
+  {hex:'#68a0d1', name:'sky', meta:'paintings'}, {hex:'#335295', name:'ultramarine', meta:'paintings'},
+  {hex:'#954a33', name:'terracotta', meta:'desk mahogany'}, {hex:'#bc786a', name:'dusty rose', meta:'desk'},
+  {hex:'#404070', name:'dusk', meta:'inspo fridge'}, {hex:'#ecdcaa', name:'butter', meta:'lamp glow'},
+  {hex:'#658a43', name:'leaf', meta:'paintings'}, {hex:'#b3bd84', name:'sage', meta:'desk trees'},
+]);
+
+// 6. schemes + modes
+const SCHEMES = [
+  {id:'fruit', name:'fruit salad', a:'#5fa88c', deep:'#357059', night:'#6fb198', d:'#e58a8a',
+   blurb:'The default. Strawberry + melon with fixed jobs: pink is only ever tape and decoration, green does every action.'},
+  {id:'strawberry', name:'strawberry', a:'#e58a8a', deep:'#a04552', night:'#e58a8a', d:'#e58a8a',
+   blurb:'One hue. The deep shade is a dusty raspberry so text and buttons stay readable on cream.'},
+  {id:'melon', name:'melon', a:'#5fa88c', deep:'#357059', night:'#6fb198', d:'#5fa88c',
+   blurb:'Already the app\'s main colour, and the calmest of the set.'},
+  {id:'blueberry', name:'blueberry', a:'#68a0d1', deep:'#376599', night:'#77aad6', d:'#68a0d1',
+   blurb:'Sky from your paintings. The coolest scheme, so the furthest from the warm desk.'},
+  {id:'apricot', name:'apricot', a:'#efa06a', deep:'#9a4d1a', night:'#efa06a', d:'#efa06a',
+   blurb:'The sunset in your road painting and your desk lamp. Comes alive at night.'},
+];
+const MODES = [['light','light · cream'],['night','night · indigo'],['dark','dark · warm']];
+const board = $('#board');
+function mkSeg(sel, items, key) {
+  const el = $(sel);
+  items.forEach(([id, label]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.dataset.id = id;
+    b.addEventListener('click', () => set(key, id)); el.appendChild(b);
+  });
+}
+function set(key, id) {
+  board.dataset[key] = id;
+  document.querySelectorAll(`#seg-${key} button`).forEach(b => b.setAttribute('aria-pressed', b.dataset.id === id));
+}
+mkSeg('#seg-scheme', SCHEMES.map(s => [s.id, s.name]), 'scheme');
+mkSeg('#seg-mode', MODES, 'mode');
+// initial state, optionally from the URL hash, e.g. #s=apricot&m=night
+const hp = new URLSearchParams(location.hash.slice(1));
+set('scheme', SCHEMES.some(s => s.id === hp.get('s')) ? hp.get('s') : 'fruit');
+set('mode', MODES.some(m => m[0] === hp.get('m')) ? hp.get('m') : 'light');
+
+const fmt = (fg, bg) => ratio(fg, bg).toFixed(2);
+const cards = $('#scheme-cards');
+SCHEMES.forEach(s => {
+  const c = document.createElement('div'); c.className = 'card dark';
+  c.innerHTML = `<div class="tag"><span>${s.name}</span><span>${s.id === 'fruit' ? 'two accents' : 'one accent'}</span></div><div class="strip"></div>` +
+    `<p class="note" style="opacity:.85;margin-top:12px">${s.blurb}</p>` +
+    `<div class="sc-lines">deep on cream ${fmt(s.deep,'#fbf7ee')} · on paper ${fmt(s.deep,'#f6efdd')}<br>` +
+    `night on card ${fmt(s.night,'#30305a')} · on warm dark ${fmt(s.night,'#2b2622')}</div>`;
+  const strip = c.querySelector('.strip'); strip.style.gridTemplateColumns = 'repeat(4, 1fr)';
+  [[s.a,'fill'],[s.deep,'deep'],[s.night,'night'],[s.d,'tape / decor']].forEach(([h,n]) => strip.appendChild(sw(h,{name:n})));
+  cards.appendChild(c);
+});
+fill('#night-sw', [
+  {hex:'#232340', name:'night page', meta:'cream on it 14.17:1'},
+  {hex:'#30305a', name:'night card', meta:'cream on it 11.58:1'},
+  {hex:'#404070', name:'dusk (sampled)', meta:'too light for accents'},
+  {hex:'#1c1915', name:'dark page', meta:'existing --backdrop'},
+  {hex:'#2b2622', name:'dark card', meta:'existing --backdrop-lab'},
+]);
+</script>
+</body>
+</html>
