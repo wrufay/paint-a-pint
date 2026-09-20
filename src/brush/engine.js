@@ -1,11 +1,14 @@
 // Impressionistic acrylic brush engine. Pure JS, no DOM, so it runs in the browser and in Node.
 //
-// Model (iteration 1):
-//   • Canvas = colour (linear RGB) + paint height + wetness + a fixed linen-weave height.
+// Model (iteration 2):
+//   • Canvas = colour (linear RGB) + a wet paint layer (solids + water) on a dried film + a fixed linen-weave height.
 //   • A brush is a row of individual bristles. Each bristle carries its own paint (colour + load),
 //     lays it down along its own path, and runs dry on its own -> streaks, broken edges, dry-brush.
 //   • Dry brush: as a bristle empties, the weave peaks catch paint and the valleys are skipped.
-//   • Wet-on-wet: fresh paint stays wet for a while; a bristle dragged through wet paint picks it up.
+//   • Drying: the water in the wet layer evaporates on a clock (thick paint far slower than thin, a skin slowing
+//     the last of it). As it goes the paint stiffens: open (blends, gets picked up) -> tacky (drags, breaks up under
+//     a brush) -> locked, when the wet layer freezes into film. Later paint covers film instead of mixing with it.
+//   • Wet-on-wet: a bristle dragged through open paint picks it up and mixes.
 //   • Colour mixes subtractively (geometric mean in linear RGB), so blue + yellow leans green.
 //   • Everything is lit from paint height (normal map + a touch of gloss), so thick paint reads as thick.
 
@@ -17,7 +20,13 @@ export const DEFAULTS = {
   opacity: 0.94,       // how opaque a full bristle lays paint (acrylic ~ opaque)
   dry: 0.75,           // dry-brush strength: how much the weave blocks an emptying bristle
   pickup: 0.14,        // how much wet paint under a bristle mixes into its colour
-  wetSeconds: 90,      // acrylic stays workable for a short while
+  wetSeconds: 90,      // open time: how long one stroke's worth of paint stays blendable
+  waterMix: 0.4,       // water share of paint as it leaves the brush (thinned paint = higher, and more see-through)
+  thickDry: 0.8,       // thick paint dries slower (0 = thickness doesn't matter)
+  skin: 1.5,           // surface skin slows the last of the water (0 = constant rate)
+  tack: 0.5,           // how much half-dry paint drags and breaks up under the brush
+  dryDarken: 0.08,     // acrylic dries a touch darker
+  timeScale: 1,        // simulated seconds per real second (time warp)
   heightGain: 0.055,   // paint thickness laid per sample
   relief: 5.0,         // how strongly thickness shows in the lighting
   weave: 0.10,         // canvas texture strength
@@ -31,6 +40,14 @@ export const DEFAULTS = {
 };
 
 const TAU = Math.PI * 2;
+
+// Drying. f = water / (solids + water) of the wet layer. Above F_OPEN paint blends freely; below F_LOCK it is a film.
+const F_OPEN = 0.3, F_LOCK = 0.12, F_FRESH = 0.4;
+const DAB = 0.08;                                               // thickness of one typical stroke (measured)
+// water one DAB must lose to go from fresh to F_OPEN, per unit of wetSeconds
+const E0 = DAB * (1 - F_FRESH) * (F_FRESH / (1 - F_FRESH) - F_OPEN / (1 - F_OPEN));
+const TILE = 32;                                                // drying and shading work on tiles, only where paint is wet
+const smooth01 = (t) => { t = t < 0 ? 0 : t > 1 ? 1 : t; return t * t * (3 - 2 * t); };
 
 export const srgbToLinear = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
 export const linearToSrgb = (c) => (c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055);
@@ -82,20 +99,43 @@ export class PaintEngine {
     this.rand = mulberry32(seed);
     const n = width * height;
     this.color = new Float32Array(n * 3);
-    this.height = new Float32Array(n);
-    this.wetUntil = new Float32Array(n);
+    this.height = new Float32Array(n);   // solids in the wet layer
+    this.water = new Float32Array(n);    // water in the wet layer
+    this.film = new Float32Array(n);     // dried paint underneath
     this.ground = new Float32Array(n);
     this.scratchH = new Float32Array(n);
     this.rgba = new Uint8ClampedArray(n * 4);
-    this.now = 0;
+    this.TX = Math.ceil(width / TILE); this.TY = Math.ceil(height / TILE);
+    this.tileActive = new Uint8Array(this.TX * this.TY);   // has wet paint, so it needs drying
+    this.tileDirty = new Uint8Array(this.TX * this.TY);    // needs re-shading
+    this.tileProg = new Float32Array(this.TX * this.TY);   // mean dryness when last shaded
+    this.now = 0;                        // simulated seconds
+    this._t = undefined; this._pend = 0;
     this.stroke = null;
-    this.dirty = null;
     this._makeGround(seed);
     this.clear();
   }
 
   setParams(p) { Object.assign(this.params, p); }
-  setTime(t) { this.now = t; }
+
+  // Real seconds in; drying runs on simulated seconds (real * timeScale), in batches so idle frames stay cheap.
+  setTime(t) {
+    const dt = this._t === undefined ? 0 : Math.max(0, t - this._t);
+    this._t = t;
+    this._pend += dt * this.params.timeScale;
+    if (this._pend >= 0.25) { const s = this._pend; this._pend = 0; this.advance(s); }
+  }
+
+  // Let `seconds` of simulated time pass. Big jumps are sub-stepped, so a long wait dries the paint the same way.
+  advance(seconds) {
+    if (!(seconds > 0)) return;
+    this.now += seconds;
+    const steps = Math.min(20, Math.ceil(seconds / 2));
+    for (let k = 0; k < steps; k++) this._dry(seconds / steps);
+  }
+
+  // "Dry now": everything wet becomes film, as if left for a day.
+  dryAll() { this.advance(86400); this.tileDirty.fill(2); this.anyDirty = true; }
 
   _makeGround(seed) {
     const { W, H } = this, r = mulberry32(seed * 31 + 5);
@@ -123,22 +163,23 @@ export class PaintEngine {
     const n = this.W * this.H;
     const g = [srgbToLinear(0.93), srgbToLinear(0.9), srgbToLinear(0.83)]; // warm gesso
     for (let i = 0; i < n; i++) { this.color[i * 3] = g[0]; this.color[i * 3 + 1] = g[1]; this.color[i * 3 + 2] = g[2]; }
-    this.height.fill(0); this.wetUntil.fill(0);
-    this.dirty = { x0: 0, y0: 0, x1: this.W, y1: this.H };
+    this.height.fill(0); this.water.fill(0); this.film.fill(0);
+    this.tileActive.fill(0); this.tileProg.fill(0); this.tileDirty.fill(2); this.anyDirty = true;
   }
 
   // one-level undo (buffers are reused, so no allocation per stroke)
   snapshot() {
-    const s = this._snap || (this._snap = { c: new Float32Array(this.color.length), h: new Float32Array(this.height.length), w: new Float32Array(this.wetUntil.length) });
-    s.c.set(this.color); s.h.set(this.height); s.w.set(this.wetUntil);
+    const n = this.height.length;
+    const s = this._snap || (this._snap = { c: new Float32Array(n * 3), h: new Float32Array(n), w: new Float32Array(n), f: new Float32Array(n), a: new Uint8Array(this.tileActive.length) });
+    s.c.set(this.color); s.h.set(this.height); s.w.set(this.water); s.f.set(this.film); s.a.set(this.tileActive);
     this._hasSnap = true;
   }
   restore() {
     if (!this._hasSnap) return false;
     const s = this._snap;
-    this.color.set(s.c); this.height.set(s.h); this.wetUntil.set(s.w);
+    this.color.set(s.c); this.height.set(s.h); this.water.set(s.w); this.film.set(s.f); this.tileActive.set(s.a);
     this._hasSnap = false;
-    this.dirty = { x0: 0, y0: 0, x1: this.W, y1: this.H };
+    this.tileDirty.fill(2); this.anyDirty = true;
     return true;
   }
 
@@ -204,7 +245,8 @@ export class PaintEngine {
   endStroke() { this.stroke = null; }
 
   _deposit(cx, cy, pressure, axis) {
-    const { W, H, color, height, wetUntil, ground } = this, P = this.params, s = this.stroke;
+    const { W, H, color, height, water, film, ground } = this, P = this.params, s = this.stroke;
+    const wm = P.waterMix, transp = Math.pow(Math.min(1, (1 - wm) / (1 - F_FRESH)), 0.8); // thinned paint is see-through
     const a = Math.atan2(axis[1], axis[0]) / 2, ca = Math.cos(a), sa = Math.sin(a);
     const press = Math.min(1, Math.max(0.05, pressure));
     const spread = 0.55 + 0.6 * press;               // harder press splays the row wider
@@ -228,63 +270,138 @@ export class PaintEngine {
           const d2 = (xx - bx) * (xx - bx) + (yy - by) * (yy - by);
           if (d2 > r * r) continue;
           const i = yy * W + xx, fall = 1 - d2 / (r * r);
-          // dry brush: weave peaks catch paint, valleys are skipped as the bristle empties
-          const reach = contact - dryT * (1 - ground[i]) * 1.3 - dryT * 0.15;
+
+          // how workable the wet paint already here is: 1 open (blends), 0 locked or bare canvas
+          const s0 = height[i], w0 = water[i], tw = s0 + w0;
+          const wk = tw > 1e-5 ? smooth01((w0 / tw - F_LOCK) / (F_OPEN - F_LOCK)) : 0;
+          const tacky = 4 * wk * (1 - wk);   // peaks halfway between open and locked
+
+          // dry brush: weave peaks catch paint, valleys are skipped as the bristle empties.
+          // Half-dry paint drags: the same skipping, so it breaks up instead of blending.
+          const reach = contact - dryT * (1 - ground[i]) * 1.3 - dryT * 0.15 - tacky * P.tack * (0.25 + 0.75 * (1 - ground[i]));
           if (reach <= 0) continue;
           const amt = Math.min(1, reach * 1.4) * fall;
 
-          const c = i * 3, wet = Math.min(1, Math.max(0, (wetUntil[i] - this.now) / P.wetSeconds));
-          // bristle drags wet paint from the canvas into its own colour
-          // (only from pixels that actually hold paint, not bare wet gesso, or the bristle bleaches itself)
-          const present = Math.min(1, height[i] * 8);
-          if (wet > 0.02 && present > 0.05 && P.pickup > 0) {
-            const t = Math.min(0.5, P.pickup * wet * present * amt * (1.4 - loadFrac));
+          const c = i * 3;
+          // bristle drags open paint from the canvas into its own colour
+          // (only from pixels that actually hold wet paint, not bare gesso, or the bristle bleaches itself)
+          const present = Math.min(1, tw * 8);
+          if (wk > 0.02 && present > 0.05 && P.pickup > 0) {
+            const t = Math.min(0.5, P.pickup * wk * present * amt * (1.4 - loadFrac));
             mix3(tmp, b.c0, b.c1, b.c2, color[c], color[c + 1], color[c + 2], t);
             b.c0 = tmp[0]; b.c1 = tmp[1]; b.c2 = tmp[2];
           }
-          // lay paint down: opaque, less so as the bristle runs empty
-          const alpha = Math.min(1, amt * P.opacity * (0.6 + 0.4 * Math.min(1, loadFrac * 3)));
+          // lay paint down: opaque, less so as the bristle runs empty or the paint is thinned
+          const alpha = Math.min(1, amt * P.opacity * transp * (0.6 + 0.4 * Math.min(1, loadFrac * 3)));
           mix3(tmp, color[c], color[c + 1], color[c + 2], b.c0, b.c1, b.c2, alpha);
-          color[c] = tmp[0]; color[c + 1] = tmp[1]; color[c + 2] = tmp[2];
+          // over dried paint there is nothing to mix with: the new paint just covers it
+          const cover = Math.min(1, film[i] * 10) * (1 - wk);
+          for (let k = 0; k < 3; k++) {
+            const old = color[c + k], fresh = k === 0 ? b.c0 : k === 1 ? b.c1 : b.c2;
+            color[c + k] = tmp[k] * (1 - cover) + (old * (1 - alpha) + fresh * alpha) * cover;
+          }
 
-          height[i] = Math.min(1.6, height[i] + amt * P.heightGain * (0.35 + 0.65 * Math.min(1, loadFrac)));
-          wetUntil[i] = this.now + P.wetSeconds;
+          // new paint arrives as solids + water, so its thickness is the same as before but it now has to dry
+          const room = Math.max(0, 1.6 - film[i] - tw);
+          const laid = Math.min(room, amt * P.heightGain * (0.35 + 0.65 * Math.min(1, loadFrac)));
+          height[i] = s0 + laid * (1 - wm);
+          water[i] = w0 + laid * wm;
           b.load -= P.consumption * amt;
 
           if (xx < x0) x0 = xx; if (xx > x1) x1 = xx; if (yy < y0) y0 = yy; if (yy > y1) y1 = yy;
         }
       }
     }
-    if (x1 >= x0) this._markDirty(x0, y0, x1 + 1, y1 + 1);
+    if (x1 >= x0) { this._markActive(x0, y0, x1 + 1, y1 + 1); this._markDirty(x0 - 2, y0 - 2, x1 + 3, y1 + 3); }
   }
 
-  _markDirty(x0, y0, x1, y1) {
-    const d = this.dirty;
-    if (!d) this.dirty = { x0, y0, x1, y1 };
-    else { d.x0 = Math.min(d.x0, x0); d.y0 = Math.min(d.y0, y0); d.x1 = Math.max(d.x1, x1); d.y1 = Math.max(d.y1, y1); }
+  _tiles(x0, y0, x1, y1, fn) {
+    const { TX, TY } = this;
+    const tx0 = Math.max(0, Math.floor(x0 / TILE)), tx1 = Math.min(TX - 1, Math.floor((x1 - 1) / TILE));
+    const ty0 = Math.max(0, Math.floor(y0 / TILE)), ty1 = Math.min(TY - 1, Math.floor((y1 - 1) / TILE));
+    for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) fn(ty * TX + tx);
+  }
+  _markActive(x0, y0, x1, y1) { this._tiles(x0, y0, x1, y1, (t) => { this.tileActive[t] = 1; }); }
+  // level 2 = a brush just touched it (shade now), 1 = drying changed it (shade when there's time)
+  _markDirty(x0, y0, x1, y1, level = 2) { this._tiles(x0, y0, x1, y1, (t) => { if (this.tileDirty[t] < level) this.tileDirty[t] = level; }); this.anyDirty = true; }
+
+  // ── drying ────────────────────────────────────────────────────────────────
+  // Water leaves the wet layer. Thick paint dries slowly (roughly with thickness squared, since water has to
+  // diffuse out) and a skin slows the last of it. When the solvent share drops under F_LOCK the layer freezes
+  // into the dried film.
+  _dry(dt) {
+    const { W, H, TX, TY, height, water, film, tileActive, tileProg } = this, P = this.params;
+    const E = E0 / Math.max(1, P.wetSeconds);
+    for (let ty = 0; ty < TY; ty++) {
+      for (let tx = 0; tx < TX; tx++) {
+        const t = ty * TX + tx;
+        if (!tileActive[t]) continue;
+        const xa = tx * TILE, ya = ty * TILE, xb = Math.min(W, xa + TILE), yb = Math.min(H, ya + TILE);
+        let wet = 0, prog = 0, locked = false;
+        for (let y = ya; y < yb; y++) {
+          for (let x = xa, i = y * W + xa; x < xb; x++, i++) {
+            let s = height[i], w = water[i];
+            if (s <= 0 && w <= 0) continue;
+            const tot = s + w;
+            const thick = 1 / Math.max(0.5, 1 + P.thickDry * (tot / DAB - 1));
+            const done = Math.min(1, Math.max(0, 1 - w / tot / F_FRESH));
+            w = Math.max(0, w - E * thick * dt / (1 + P.skin * done));
+            if (w / (s + w) <= F_LOCK) { film[i] += s; height[i] = 0; water[i] = 0; locked = true; continue; }
+            water[i] = w; wet++; prog += done;
+          }
+        }
+        if (!wet) tileActive[t] = 0;
+        // re-shade the tile once it has visibly changed (colour and relief shift as it dries)
+        const mean = wet ? prog / wet : 1;
+        if (!wet || locked || Math.abs(mean - tileProg[t]) > 0.03) {
+          tileProg[t] = mean;
+          this._markDirty(xa - 1, ya - 1, xb + 1, yb + 1, 1);
+        }
+      }
+    }
   }
 
   // ── lighting ──────────────────────────────────────────────────────────────
-  // Re-shades only the dirty region. Returns {x,y,w,h} to blit, or null.
-  render() {
-    if (!this.dirty) return null;
-    const { W, H, color, height, ground, scratchH, rgba } = this, P = this.params;
-    const x0 = Math.max(0, this.dirty.x0 - 2), y0 = Math.max(0, this.dirty.y0 - 2);
-    const x1 = Math.min(W, this.dirty.x1 + 2), y1 = Math.min(H, this.dirty.y1 + 2);
-    this.dirty = null;
+  // Re-shades the dirty tiles and returns the {x,y,w,h} box to blit (pixels of clean tiles inside it are unchanged), or null.
+  // Tiles a brush just touched are always shaded. Tiles that only changed because paint dried share `lazy` tiles per
+  // call, so a big wet canvas drying doesn't stall one frame.
+  render(lazy = 48) {
+    if (!this.anyDirty) return null;
+    const { W, TX, TY, tileDirty } = this, P = this.params;
 
-    // combined surface height: thin paint keeps the weave, thick paint buries it
-    for (let y = Math.max(0, y0 - 1); y < Math.min(H, y1 + 1); y++) {
-      for (let x = Math.max(0, x0 - 1); x < Math.min(W, x1 + 1); x++) {
-        const i = y * W + x, p = height[i];
-        scratchH[i] = p + ground[i] * P.weave * Math.max(0, 1 - p * 4);
-      }
-    }
     const la = P.lightAngle * Math.PI / 180;
     let lx = Math.cos(la), ly = -Math.sin(la), lz = 0.62;
     const ln = Math.hypot(lx, ly, lz); lx /= ln; ly /= ln; lz /= ln;
     let hx = lx, hy = ly, hz = lz + 1; const hn = Math.hypot(hx, hy, hz); hx /= hn; hy /= hn; hz /= hn;
-    const ambient = 0.5, flat = ambient + (1 - ambient) * lz;
+    const light = { lx, ly, lz, hx, hy, hz, ambient: 0.5, flat: 0.5 + 0.5 * lz };
+
+    let bx0 = W, by0 = this.H, bx1 = 0, by1 = 0, left = 0;
+    for (let ty = 0; ty < TY; ty++) {
+      for (let tx = 0; tx < TX; tx++) {
+        const t = ty * TX + tx, level = tileDirty[t];
+        if (!level) continue;
+        if (level === 1 && lazy-- <= 0) { left++; continue; }
+        tileDirty[t] = 0;
+        const x0 = tx * TILE, y0 = ty * TILE, x1 = Math.min(W, x0 + TILE), y1 = Math.min(this.H, y0 + TILE);
+        this._shade(x0, y0, x1, y1, light);
+        if (x0 < bx0) bx0 = x0; if (y0 < by0) by0 = y0; if (x1 > bx1) bx1 = x1; if (y1 > by1) by1 = y1;
+      }
+    }
+    this.anyDirty = left > 0;
+    return bx1 > bx0 ? { x: bx0, y: by0, w: bx1 - bx0, h: by1 - by0 } : null;
+  }
+
+  _shade(x0, y0, x1, y1, L) {
+    const { W, H, color, height, water, film, ground, scratchH, rgba } = this, P = this.params;
+    const { lx, ly, lz, hx, hy, hz, ambient, flat } = L;
+
+    // combined surface height: dried film + wet layer. Thin paint keeps the weave, thick paint buries it
+    for (let y = Math.max(0, y0 - 1); y < Math.min(H, y1 + 1); y++) {
+      for (let x = Math.max(0, x0 - 1); x < Math.min(W, x1 + 1); x++) {
+        const i = y * W + x, p = film[i] + height[i] + water[i];
+        scratchH[i] = p + ground[i] * P.weave * Math.max(0, 1 - p * 4);
+      }
+    }
 
     for (let y = y0; y < y1; y++) {
       const ym = Math.max(0, y - 1), yp = Math.min(H - 1, y + 1);
@@ -294,8 +411,14 @@ export class PaintEngine {
         const gy = (scratchH[yp * W + x] - scratchH[ym * W + x]) * 0.5 * P.relief * 4;
         let nx = -gx, ny = -gy, nz = 1; const nn = Math.hypot(nx, ny, nz); nx /= nn; ny /= nn; nz /= nn;
         const diff = Math.max(0, nx * lx + ny * ly + nz * lz);
-        const lit = (ambient + (1 - ambient) * diff) / flat;
-        const spec = Math.pow(Math.max(0, nx * hx + ny * hy + nz * hz), 36) * P.gloss * (0.25 + Math.min(1, height[i] * 3));
+        let lit = (ambient + (1 - ambient) * diff) / flat;
+
+        // how dry the paint here is: wet paint is a little lighter and glossier, dried paint sits darker and satin
+        const p = film[i] + height[i] + water[i], tw = height[i] + water[i];
+        const dry = tw > 1e-5 ? Math.min(1, Math.max(0, 1 - water[i] / tw / F_FRESH)) : 1;
+        lit *= 1 - P.dryDarken * dry * Math.min(1, p * 8);
+
+        const spec = Math.pow(Math.max(0, nx * hx + ny * hy + nz * hz), 36) * P.gloss * (0.25 + Math.min(1, p * 3)) * (1.5 - 0.5 * dry);
         const o = i * 4, c = i * 3;
         rgba[o] = linearToSrgb(Math.min(1, color[c] * lit + spec)) * 255;
         rgba[o + 1] = linearToSrgb(Math.min(1, color[c + 1] * lit + spec)) * 255;
@@ -303,11 +426,10 @@ export class PaintEngine {
         rgba[o + 3] = 255;
       }
     }
-    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
   }
 
   renderAll() {
-    this.dirty = { x0: 0, y0: 0, x1: this.W, y1: this.H };
+    this.tileDirty.fill(2); this.anyDirty = true;
     return this.render();
   }
 }

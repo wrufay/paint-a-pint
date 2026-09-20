@@ -21,7 +21,13 @@ const SLIDERS = [
   ['dry', 'dry brush', 0, 1.5, 0.05],
   ['opacity', 'opacity', 0.3, 1, 0.02],
   ['pickup', 'wet pickup', 0, 0.6, 0.01],
-  ['wetSeconds', 'wet time (s)', 5, 300, 5],
+  ['wetSeconds', 'open time (s)', 5, 300, 5],
+  ['waterMix', 'paint water', 0.1, 0.85, 0.01],
+  ['thickDry', 'thick dries slow', 0, 2, 0.05],
+  ['skin', 'skin', 0, 4, 0.1],
+  ['tack', 'tack drag', 0, 1.5, 0.05],
+  ['dryDarken', 'dry darkening', 0, 0.3, 0.01],
+  ['timeScale', 'time warp', 1, 120, 1],
   ['heightGain', 'thickness', 0.01, 0.2, 0.005],
   ['relief', 'relief', 0, 14, 0.25],
   ['weave', 'canvas weave', 0, 0.4, 0.01],
@@ -103,6 +109,7 @@ canvas.addEventListener('pointercancel', end);
 // ── buttons ─────────────────────────────────────────────────────────────────
 document.getElementById('undo').onclick = () => engine.restore();
 document.getElementById('clear').onclick = () => { engine.snapshot(); engine.clear(); };
+document.getElementById('dry').onclick = () => { engine.snapshot(); engine.dryAll(); }; // as if left overnight
 document.getElementById('tuneBtn').onclick = () => document.getElementById('tune').classList.toggle('open');
 document.getElementById('save').onclick = () => {
   const a = document.createElement('a'); a.download = 'paint-a-pint.png'; a.href = canvas.toDataURL('image/png'); a.click();
@@ -124,6 +131,7 @@ const stat = document.getElementById('stat');
 let frames = 0, t0 = performance.now(), worst = 0;
 function frame() {
   const t = performance.now();
+  engine.setTime(nowS()); // paint keeps drying while nobody is painting
   const r = engine.render();
   if (r) { ctx.putImageData(img, 0, 0, r.x, r.y, r.w, r.h); worst = Math.max(worst, performance.now() - t); }
   frames++;
