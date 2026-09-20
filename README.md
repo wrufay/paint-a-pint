@@ -66,4 +66,13 @@ Pigment mixing tables come from [Spectral.js](https://github.com/rvanwijnen/spec
 
 [Windsor & Newton Galeria](https://www.winsornewton.com/en-ca/collections/galeria-acrylic) and [Amsterdam](https://www.royaltalens.com/collections/amsterdam-standard-series-acrylics) acrylics for being the best cost affordable acrylics that carried me through years of silly painting. **Reference images and exact colour codes of paints I own were used to generate the 3D tubes.**
 
-
+## What's next
+- **Two books** on the desk that users can click: one an **app tutorial** and the other an **art tutorial**. I want to share my own (minimal) expertise to make creating art more accessible, less intimidating, and ultimately **playful**.
+- In addition to my own personal art tips, users could write sticky notes or **have notebooks** to keep track of whatever they  want. Opinions on an **AI guide?** 💭
+- **A clock** to track the amount of time spent on a piece, and that changes the UI between **dark and light mode** to match the local time in the day.
+- **Different locations** to paint in. Finally, I won't have to wait years to realize one of my dreams of making paintings in the Swiss Alps.
+- **Reference photos** right on the desk, syncing with your personal Pinterest boards or photo galleries so you never run out of inspiration to take from.
+ 
+## Potential expansions
+- Right now, *paint-a-pint* is front-end only, and that's by design. It fulfills its purpose of being a **tool to build your skills**. In the future, *paint-a-pint* could become a real personal gallery - or even a shared one among friends and community members, each writing their own playbooks on tips, techniques, and thinking.
+- I would love to add more media such as oil pastel or alcohol markers. However, I'm being considerate of which media really fit this tool, rather than trying to include everything.

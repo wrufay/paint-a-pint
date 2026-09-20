@@ -62,3 +62,61 @@ test after deployment:
 - undo only works once (both ipad and laptop)
 - speed is normal on laptop (macbook pro, but heating up a lot) and it's very slow on my ipad. try to find ways to optimize... because speed is important and  yeah if i had my wacom with me this would be actually goated but yeah. 
 
+
+notes after testing mixing palette on ipad:
+- can we make it so that like it doesnt keep "selecting" things?
+
+priorities (features, need to be knocked out quick, after deciding how i want them implemented)
+- reference photo
+- after the canvas, also need to like edit the diorama and make it better (potentially different options + night mode + MATCHES TIME IN THE DAYY yes that's an amazing idea actually!!!)
+- ADD A CLOCK SOMEWHERE! real life ticking clock. could also add a 3d timer/alarm that you can use to keep track of how long you spent painting - everything in one place.
+- LET'S NOT ADD TOO MANY THINGS THIS CLOSE TO SUBMISSION DEADLINE LOL!
+
+- IMPORTANT: we should make the palette look like a real brown palette and allow user to choose where they put the colours..
+
+- IMPORTANT: i feel like the experience on ipad is not the best!! would have been SO good if we actually like went with a wacom ahh i dont have it with me. but yeah we should genuinely see how we can improve the apple pencil experience (one thing: good that using finger doesn't draw, but it still produces like a cursor circle ykwim? so maybe we can remove that.)
+
+- IMPORTANT: so for the birds-eye view, we should bascially like have the palette on the left side and actually be sitting on the table instead of having that additional white palette there if that makes sense. we want this to be as simple and realistic as possible!
+
+- personal note: still totally fine with no backend.
+
+
+
+PROMPT:
+wait okay so the next largest thing we can do right now is to replace the circular paint colours with the tubes you already made. the idea is to have them all arranged in birds-eye view on the table  and when you hover, it says some metadata about the paint like colour, opacity and small sentence of what it's used for (i can provide this and make better later, u just include that feature for now). and then, have the real palette be interactive. because of this i think we should default to birds-eye-view instead of easel? go ahead and implement this if it makes sense, feel free to ask questions to clarify
+
+was thinking if there's too many paints to put on the table at once we could have them sitting upright in a transparent container/box and then u can select which ones u want on the table? let me know what you think please!
+
+
+post-prompt:
+- firstly, this is what galerias actually look like - please make it match a little better
+- next, can we make the little modal on the right side (with all the buttons and settings) be draggable
+- please make the paint palette look like the standard type insteaf of the white. don't put it underneath the painting, we want the canvas to be centered and fairly large still. please move the modal further down, remove that window sill taking up so much room (it is looking a bit wrong in the zoom animation too) and use that space to put the water cups with brushes please.  then the palette can go on the left where the last row of paints are. then you can scatter the paints throughout empty space on the desk - perhaps with the primary colours together and other colours anywhere. don't line them up neatly, place them at angles.
+- for the hover metadata tooltips, please make it more artistically technical and less conversational. include the small like square showing opacity and write the official name out clearly, make the background not full opacity
+
+- also don't touch the readme i'm going to work on that in parallel in my own words and personality.
+
+
+
+stuff for coding so i dont forget later
+- make the trees look better
+- edit the text and overall design, spend as much intentional time as possible tweaking layout (thinking through) and also edit the text and fonts to my desired styling.
+- could also add more cards using the design system or use that to generate the assets instead of using canva (makes a lot more sense actually)
+
+
+PROMPT:
+- okay so bascially im trying to use this session to use this design system to generate some assets that i am using in my devpost and readme. nothing crazy, use these as inspiration for the amount of complexity vs simplicity. of course we should make it as visually appealing as possible, sticking to the theme of our app and yeah help me come up with some things? please ask me questions to clarify as well
+
+
+some small things:
+- when we are easel, maybe make it strictly like view mode, no painting.
+- ai features to teach the art? or just a small playbook 
+- btw those can be future features lmao. i actually wanan dev this but we got 3 hours rn so lock in!@
+
+- can we make the palette a little bit bigger, then perhaps move the paints beneath the canvas to the left and right sides to fill the space, and make the canvas bigger
+
+- also keyboard shortcuts maybe? like ctrl/cmd + something to change the brush for example or the size or undo... perhaps. still ofc it's supposed to be drawing first so yeah this might not be priority
+- alsooo dedicated BOOKS on the desk - an art book and then an app tutorial!
+
+- also  we should remove the lab html page soon.
+
