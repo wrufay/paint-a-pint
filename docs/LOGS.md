@@ -56,3 +56,9 @@ other notes + context from the photos
 todo later for design system
 - implement dark
 - fix one-off hard coded
+
+
+test after deployment:
+- undo only works once (both ipad and laptop)
+- speed is normal on laptop (macbook pro, but heating up a lot) and it's very slow on my ipad. try to find ways to optimize... because speed is important and  yeah if i had my wacom with me this would be actually goated but yeah. 
+
