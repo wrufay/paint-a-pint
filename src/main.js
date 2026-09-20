@@ -195,7 +195,7 @@ function leavePaint(hang = true) {
   }, wasDown ? { from: easelFlat, to: easelUp, legs: true } : undefined);   // only lift the easel back up if it was put down
 }
 
-initAcrylicUI(painter, { onBack: () => leavePaint(true), view });
+initAcrylicUI(painter, { onBack: () => leavePaint(true), view, isPainting: () => mode === 'paint' });
 addEventListener('keydown', (e) => { if (e.key === 'Escape') leavePaint(false); });
 
 // ── picking ──────────────────────────────────────────────────────────────────

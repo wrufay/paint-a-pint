@@ -114,16 +114,16 @@ export class AcrylicPainter {
 }
 
 // Wires the taped-note card to an AcrylicPainter and the pointer events on the paper element.
-export function initAcrylicUI(painter, { onBack, view }) {
+export function initAcrylicUI(painter, { onBack, view, isPainting = () => true }) {
   const paper = document.getElementById('paper');
   const cursor = document.getElementById('cursor');
   const swatches = document.getElementById('swatches');
   const size = document.getElementById('size');
 
   const sync = () => swatches.querySelectorAll('.sw').forEach((b) => b.classList.toggle('sel', b.dataset.id === painter.paint.id));
-  BOX.forEach((p) => {
+  BOX.forEach((p, i) => {
     const b = document.createElement('button');
-    const name = `${p.brand} · ${p.name}${p.code ? ' · ' + p.code : ''}`;
+    const name = `${i + 1} · ${p.brand} · ${p.name}${p.code ? ' · ' + p.code : ''}`;   // the number is the key that picks it
     b.className = 'sw'; b.title = name; b.setAttribute('aria-label', name); b.dataset.id = p.id; b.style.background = p.hex;
     b.onclick = () => { painter.setPaint(p); sync(); };
     swatches.appendChild(b);
@@ -178,6 +178,23 @@ export function initAcrylicUI(painter, { onBack, view }) {
 
   const esc = document.getElementById('esc'); if (esc) esc.textContent = 'esc: back to the room, painting stays on the easel';
   sync();
+
+  // keyboard: 1-9 pick a paint (card order), [ ] brush size, z undo, w wetness. Only while painting, and never while typing.
+  addEventListener('keydown', (e) => {
+    if (!isPainting() || e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = e.target;
+    if (t && (t.isContentEditable || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || (t.tagName === 'INPUT' && t.type !== 'range' && t.type !== 'checkbox'))) return;
+    const k = e.key;
+    if (k >= '1' && k <= '9') {
+      const p = BOX[+k - 1]; if (p) { painter.setPaint(p); sync(); }
+    } else if (k === '[' || k === ']') {
+      painter.size = Math.round(Math.min(+size.max, Math.max(+size.min, painter.size * (k === ']' ? 1.15 : 1 / 1.15))));
+      size.value = painter.size; updateCursor(); if (panel.style.display !== 'none') panel.refresh();
+    } else if (!e.repeat && (k === 'z' || k === 'Z')) painter.undo();
+    else if (!e.repeat && (k === 'w' || k === 'W')) wetBtn.click();
+    else return;
+    e.preventDefault();
+  });
 
   const toCanvas = (e) => {
     const r = paper.getBoundingClientRect();
