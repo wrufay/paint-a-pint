@@ -14,7 +14,7 @@
     #app canvas { display: block; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 
     .note {
-      position: relative; background: var(--cream); border-radius: 6px;
+      position: relative; background: var(--cream); border-radius: var(--radius-card);
       box-shadow: 0 6px 18px rgba(0,0,0,.35);
     }
     .note::before { /* washi tape */
@@ -27,7 +27,7 @@
     #title small { display: block; font-weight: var(--weight-regular); letter-spacing: .04em; color: var(--ink-soft); margin-top: 3px; font-size: var(--text-xs); }
     #hint {
       position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); padding: 9px 16px;
-      background: rgba(251,247,238,.92); border-radius: 999px; font-size: var(--text-sm); letter-spacing: .06em;
+      background: rgba(251,247,238,.92); border-radius: var(--radius-pill); font-size: var(--text-sm); letter-spacing: .06em;
       box-shadow: 0 4px 14px rgba(0,0,0,.3); transition: opacity .4s; pointer-events: none;
     }
     body.painting #title, body.painting #hint, body.travelling #title, body.travelling #hint { opacity: 0; }
@@ -56,7 +56,7 @@
     input[type=range] { flex: 1; accent-color: var(--green); }
     .btn {
       font: inherit; font-size: var(--text-sm); letter-spacing: var(--tracking-btn); color: var(--ink); background: #fff; cursor: pointer;
-      border: 2px solid var(--ink); border-radius: 6px; padding: 7px 10px; width: 100%; margin-top: 8px;
+      border: var(--border-btn); border-radius: var(--radius-pill); padding: 7px 10px; width: 100%; margin-top: 8px;
     }
     .btn:hover { background: var(--butter); }
     .btn.sel { background: var(--ink); color: var(--cream); }

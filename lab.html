@@ -13,7 +13,7 @@
     #paper { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: crosshair;
              box-shadow: 0 10px 40px rgba(0,0,0,.5); background: #eee; }
 
-    .note { position: fixed; background: var(--cream); border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+    .note { position: fixed; background: var(--cream); border-radius: var(--radius-card); box-shadow: 0 6px 18px rgba(0,0,0,.35); }
     .note::before { content: ""; position: absolute; top: -9px; left: 50%; width: 64px; height: 18px; transform: translateX(-50%) rotate(-2deg);
       background: var(--tape-pink);
       clip-path: polygon(0 10%, 4% 0, 8% 12%, 12% 0, 92% 0, 96% 12%, 100% 0, 100% 90%, 96% 100%, 92% 88%, 88% 100%, 8% 100%, 4% 88%, 0 100%); }
@@ -23,7 +23,7 @@
     .sw.on { box-shadow: 0 0 0 3px var(--pink), inset 0 -3px 5px rgba(0,0,0,.25), inset 0 3px 5px rgba(255,255,255,.35); transform: translateY(-4px); }
 
     #bar { top: max(16px, env(safe-area-inset-top)); left: 16px; padding: 10px 12px 8px; display: flex; gap: 8px; align-items: center; font-size: var(--text-sm); }
-    button.b { font: inherit; font-size: var(--text-sm); letter-spacing: var(--tracking-btn); color: var(--ink); background: #fff; border: 1.5px solid rgba(74,59,52,.35); border-radius: 999px; padding: 8px 14px; }
+    button.b { font: inherit; font-size: var(--text-sm); letter-spacing: var(--tracking-btn); color: var(--ink); background: #fff; border: var(--border-btn); border-radius: var(--radius-pill); padding: 8px 14px; }
     button.b:active { background: var(--butter); }
     #tune { top: max(16px, env(safe-area-inset-top)); right: 16px; width: min(320px, calc(100vw - 32px)); max-height: calc(100vh - 130px); overflow: auto; padding: 16px 16px 12px; display: none; font-size: var(--text-sm); }
     #tune.open { display: block; }
