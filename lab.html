@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+  <title>paint-a-pint · brush lab</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root { --cream: #fbf7ee; --pink: #e58a8a; --green: #5fa88c; --ink: #4a3b34; --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2622; font-family: var(--mono); color: var(--ink); overscroll-behavior: none; }
+    #stage { position: fixed; inset: 0; display: grid; place-items: center; }
+    #paper { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: crosshair;
+             box-shadow: 0 10px 40px rgba(0,0,0,.5); background: #eee; }
+
+    .note { position: fixed; background: var(--cream); border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+    .note::before { content: ""; position: absolute; top: -9px; left: 50%; width: 64px; height: 18px; transform: translateX(-50%) rotate(-2deg);
+      background: rgba(229,138,138,.75);
+      clip-path: polygon(0 10%, 4% 0, 8% 12%, 12% 0, 92% 0, 96% 12%, 100% 0, 100% 90%, 96% 100%, 92% 88%, 88% 100%, 8% 100%, 4% 88%, 0 100%); }
+
+    #palette { left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); padding: 14px 16px 10px; display: flex; gap: 10px; align-items: center; }
+    .sw { width: 38px; height: 38px; border-radius: 50%; border: 3px solid var(--cream); box-shadow: 0 0 0 1.5px rgba(74,59,52,.35), inset 0 -3px 5px rgba(0,0,0,.25), inset 0 3px 5px rgba(255,255,255,.35); padding: 0; }
+    .sw.on { box-shadow: 0 0 0 3px var(--pink), inset 0 -3px 5px rgba(0,0,0,.25), inset 0 3px 5px rgba(255,255,255,.35); transform: translateY(-4px); }
+
+    #bar { top: max(16px, env(safe-area-inset-top)); left: 16px; padding: 10px 12px 8px; display: flex; gap: 8px; align-items: center; font-size: 12px; }
+    button.b { font: inherit; font-size: 12px; letter-spacing: .05em; color: var(--ink); background: #fff; border: 1.5px solid rgba(74,59,52,.35); border-radius: 999px; padding: 8px 14px; }
+    button.b:active { background: #f0e6d6; }
+    #tune { top: max(16px, env(safe-area-inset-top)); right: 16px; width: min(320px, calc(100vw - 32px)); max-height: calc(100vh - 130px); overflow: auto; padding: 16px 16px 12px; display: none; font-size: 12px; }
+    #tune.open { display: block; }
+    .row { display: grid; grid-template-columns: 96px 1fr 44px; gap: 8px; align-items: center; margin: 0 0 9px; }
+    .row label { letter-spacing: .03em; }
+    .row output { text-align: right; opacity: .7; }
+    input[type=range] { width: 100%; accent-color: var(--green); }
+    #tune .btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    #out { width: 100%; height: 90px; margin-top: 10px; font: 11px var(--mono); display: none; }
+    #stat { position: fixed; left: 16px; bottom: 16px; font-size: 11px; color: #cdbfae; opacity: .8; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <div id="stage"><canvas id="paper"></canvas></div>
+
+  <div id="bar" class="note">
+    <button class="b" id="undo">undo</button>
+    <button class="b" id="clear">clear</button>
+    <button class="b" id="save">save png</button>
+    <button class="b" id="tuneBtn">tune</button>
+  </div>
+
+  <div id="tune" class="note">
+    <div id="sliders"></div>
+    <div class="btns">
+      <button class="b" id="copy">copy settings</button>
+      <button class="b" id="reset">reset</button>
+    </div>
+    <textarea id="out" readonly></textarea>
+  </div>
+
+  <div id="palette" class="note"></div>
+  <div id="stat"></div>
+
+  <script type="module" src="/src/lab.js"></script>
+</body>
+</html>
