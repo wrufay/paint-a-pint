@@ -267,34 +267,62 @@ function setHoverProp(o) {
   showTip(o);
 }
 
-// ── hover tooltip: what a tube or brush is ──────────────────────────────────────────────────────────────────────────
-const OPACITY_NAME = { opaque: 'opaque', semi: 'semi-opaque', transparent: 'transparent' };
-const OPACITY_NOTE = { opaque: 'covers what is under it', semi: 'partly covers, partly lets through', transparent: 'glazes: lets what is under it show' };
+// ── hover tooltip: a spec sheet for a tube or brush ─────────────────────────────────────────────────────────────────
+const OPACITY_NAME = { opaque: 'Opaque', semi: 'Semi-opaque', transparent: 'Transparent' };
+const BRAND_LINE = { 'Amsterdam': 'Amsterdam · Standard Series · Acrylic', 'Winsor & Newton Galeria': 'Winsor & Newton · Galeria · Series 1 · Acrylic' };
 const SHAPE_TIP = {
-  flat: ['Flat brush', 'A row of bristles. Broad strokes, and edges when you turn it on its side.'],
-  filbert: ['Filbert brush', 'An oval tip. Soft, rounded marks, and the width follows your pressure.'],
-  round: ['Round brush', 'A round tip. Click for a dab, drag for a soft-edged line.'],
+  flat: ['Flat', 'Bristles in a straight row. Broad strokes; chisel edge on its side.'],
+  filbert: ['Filbert', 'Oval tip. Soft rounded marks; stroke width follows pressure.'],
+  round: ['Round', 'Round tip. Dabs by clicking; soft-edged lines by dragging.'],
 };
+const officialName = (name) => name.replace(/(^|[\s-])(\p{L})/gu, (m, sep, ch) => sep + ch.toUpperCase());   // "king's blue" -> "King's Blue"
+// the small square printed on the tubes: solid = opaque, half = semi-opaque, empty with a slash = transparent
+function opacitySquare(kind) {
+  const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 14 14'); svg.setAttribute('width', '14'); svg.setAttribute('height', '14'); svg.style.cssText = 'flex:none;display:block;';
+  const add = (tag, attrs) => { const el = document.createElementNS(NS, tag); for (const k in attrs) el.setAttribute(k, attrs[k]); svg.appendChild(el); };
+  add('rect', { x: 0.75, y: 0.75, width: 12.5, height: 12.5, fill: '#fff' });
+  if (kind === 'opaque') add('rect', { x: 0.75, y: 0.75, width: 12.5, height: 12.5, fill: '#1b1b1b' });
+  else if (kind === 'semi') add('path', { d: 'M13.25 0.75 V13.25 H0.75 Z', fill: '#1b1b1b' });
+  else add('path', { d: 'M0.75 13.25 L13.25 0.75', stroke: '#1b1b1b', 'stroke-width': 1.4, fill: 'none' });
+  add('rect', { x: 0.75, y: 0.75, width: 12.5, height: 12.5, fill: 'none', stroke: '#1b1b1b', 'stroke-width': 1.5 });
+  return svg;
+}
 const tip = document.createElement('div');
-tip.className = 'note';
-tip.style.cssText = 'position:fixed;left:0;top:0;z-index:30;display:none;max-width:250px;padding:16px 14px 12px;pointer-events:none;font-size:var(--text-sm);line-height:1.4;color:var(--ink);';
+tip.style.cssText = 'position:fixed;left:0;top:0;z-index:30;display:none;width:250px;padding:12px 14px 12px;pointer-events:none;font-size:var(--text-xs);line-height:1.35;color:var(--ink);'
+  + 'background:color-mix(in srgb, var(--cream) 82%, transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);'
+  + 'border:1.5px solid var(--line);border-radius:var(--radius-card);box-shadow:0 8px 22px rgba(0,0,0,.28);';
 document.body.appendChild(tip);
-const tipLine = (text, css) => { const d = document.createElement('div'); d.textContent = text; d.style.cssText = css || ''; tip.appendChild(d); return d; };
+const LABEL = 'font-size:10px;letter-spacing:var(--tracking-caps);text-transform:uppercase;color:var(--ink-soft);';
+function tipRow(label, value) {   // a labelled row: small caps label, then the value (text, or a node)
+  const row = document.createElement('div'); row.style.cssText = 'display:grid;grid-template-columns:86px 1fr;align-items:center;gap:8px;padding:3px 0;border-top:1px solid var(--line);';
+  const l = document.createElement('span'); l.style.cssText = LABEL; l.textContent = label;
+  const v = document.createElement('span'); v.style.cssText = 'display:flex;align-items:center;gap:7px;';
+  if (typeof value === 'string') v.textContent = value; else v.appendChild(value);
+  row.append(l, v); tip.appendChild(row);
+}
 function showTip(o) {
   if (!o) { tip.style.display = 'none'; return; }
   tip.replaceChildren();
   const paint = o.userData.paint;
+  const head = document.createElement('div'); head.style.cssText = 'display:flex;align-items:center;gap:9px;';
+  const title = document.createElement('div'); title.style.cssText = 'font-size:var(--text-base);font-weight:var(--weight-bold);line-height:1.2;';
+  const sub = document.createElement('div'); sub.style.cssText = 'font-size:10.5px;color:var(--ink-soft);margin:2px 0 8px;';
   if (paint) {
-    const head = document.createElement('div'); head.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:4px;';
-    const dot = document.createElement('span'); dot.style.cssText = `flex:none;width:18px;height:18px;border-radius:50%;background:${paint.hex};box-shadow:0 0 0 1.5px var(--ink);`;
-    const name = document.createElement('strong'); name.textContent = paint.name[0].toUpperCase() + paint.name.slice(1); name.style.cssText = 'font-weight:var(--weight-bold);';
-    head.append(dot, name); tip.appendChild(head);
-    tipLine([paint.brand.replace('Winsor & Newton ', 'W&N '), paint.code, paint.num ? 'No. ' + paint.num : ''].filter(Boolean).join(' · '), 'font-size:var(--text-xs);color:var(--ink-soft);margin-bottom:6px;');
-    tipLine(`${OPACITY_NAME[paint.opacity] || paint.opacity}: ${OPACITY_NOTE[paint.opacity] || ''}`, 'margin-bottom:6px;');
-    if (paint.blurb) tipLine(paint.blurb);
+    const dot = document.createElement('span'); dot.style.cssText = `flex:none;width:22px;height:22px;border-radius:3px;background:${paint.hex};box-shadow:0 0 0 1.5px var(--ink);`;
+    title.textContent = officialName(paint.name); head.append(dot, title);
+    sub.textContent = BRAND_LINE[paint.brand] || paint.brand;
+    tip.append(head, sub);
+    if (paint.code) tipRow('Pigment', paint.code);
+    if (paint.num) tipRow('Colour no.', String(paint.num));
+    const op = document.createElement('span'); op.style.cssText = 'display:flex;align-items:center;gap:7px;'; op.append(opacitySquare(paint.opacity), document.createTextNode(OPACITY_NAME[paint.opacity] || paint.opacity));
+    tipRow('Opacity', op);
+    if (paint.light) tipRow('Lightfast', paint.light);
+    if (paint.blurb) tipRow('Use', paint.blurb);
   } else {
-    const [title, line] = SHAPE_TIP[o.userData.shape] || [o.userData.shape, ''];
-    tipLine(title, 'font-weight:var(--weight-bold);margin-bottom:4px;'); tipLine(line);
+    const [name, use] = SHAPE_TIP[o.userData.shape] || [o.userData.shape, ''];
+    title.textContent = name + ' brush'; sub.textContent = 'Long-handled artist brush';
+    tip.append(title, sub); tipRow('Use', use);
   }
   tip.style.display = 'block';
 }

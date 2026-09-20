@@ -244,6 +244,37 @@ export function initAcrylicUI(painter, { onBack, view, isPainting = () => true }
   ui.choose = choose;
   ui.setShape = (k) => { painter.engine.params.shape = k; saveParams(painter.engine.params); syncShape(); };
 
+  // ── drag the card by its heading (double-click the heading to put it back) ────────────────────────────────────────────
+  const card = document.getElementById('card'), handle = card.querySelector('h2'), POS_KEY = 'paint-a-pint:card-pos';
+  handle.title = 'drag to move; double-click to put it back';
+  handle.style.cssText += ';cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;';
+  const place = (x, y) => {   // keep the card on screen
+    const r = card.getBoundingClientRect();
+    x = Math.min(Math.max(0, x), Math.max(0, innerWidth - r.width)); y = Math.min(Math.max(0, y), Math.max(0, innerHeight - r.height));
+    Object.assign(card.style, { left: x + 'px', top: y + 'px', right: 'auto', bottom: 'auto', transform: 'none' });
+    return [x, y];
+  };
+  const home = () => { for (const k of ['left', 'top', 'right', 'bottom', 'transform']) card.style[k] = ''; try { localStorage.removeItem(POS_KEY); } catch {} };
+  let cardDrag = null;
+  handle.addEventListener('pointerdown', (e) => {
+    const r = card.getBoundingClientRect();
+    cardDrag = { id: e.pointerId, dx: e.clientX - r.left, dy: e.clientY - r.top };
+    handle.setPointerCapture(e.pointerId); handle.style.cursor = 'grabbing';
+    place(r.left, r.top);
+  });
+  handle.addEventListener('pointermove', (e) => { if (cardDrag && e.pointerId === cardDrag.id) place(e.clientX - cardDrag.dx, e.clientY - cardDrag.dy); });
+  const cardDrop = (e) => {
+    if (!cardDrag || e.pointerId !== cardDrag.id) return;
+    cardDrag = null; handle.style.cursor = 'grab';
+    const r = card.getBoundingClientRect();
+    try { localStorage.setItem(POS_KEY, JSON.stringify({ x: r.left / innerWidth, y: r.top / innerHeight })); } catch {}
+  };
+  handle.addEventListener('pointerup', cardDrop);
+  handle.addEventListener('pointercancel', cardDrop);
+  handle.addEventListener('dblclick', home);
+  try { const saved = JSON.parse(localStorage.getItem(POS_KEY) || 'null'); if (saved) place(saved.x * innerWidth, saved.y * innerHeight); } catch {}
+  addEventListener('resize', () => { if (card.style.left) { const r = card.getBoundingClientRect(); place(r.left, r.top); } });
+
   const esc = document.getElementById('esc'); if (esc) esc.textContent = 'esc: back to the room, painting stays on the easel';
   sync();
 
