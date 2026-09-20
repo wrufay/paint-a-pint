@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>paint-a-pint colour specimen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=DM+Sans:wght@400;500;700&family=Nunito:wght@700&display=swap" rel="stylesheet">
+<style>
+  /* proposed tokens (mirrors the table in section 2) */
+  :root {
+    --cream: #fbf7ee; --paper: #f6efdd; --butter: #ecdcaa;
+    --ink: #4a3b34; --ink-soft: #756558;
+    --backdrop: #1c1915; --backdrop-lab: #2b2622; --dusk: #404070; --muted-on-dark: #cdbfae;
+    --pink: #e58a8a; --terracotta: #954a33; --green: #5fa88c; --sky: #68a0d1; --ultramarine: #335295;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--backdrop); color: var(--cream); font-family: var(--mono); }
+  body { padding: 32px 20px 80px; max-width: 1100px; margin: 0 auto; }
+  h1 { font: 400 13px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted-on-dark); margin: 0 0 6px; }
+  .lede { font-size: 12px; color: #a99b8b; margin: 0 0 8px; max-width: 74ch; line-height: 1.6; }
+  h2 { font: 400 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--pink); margin: 56px 0 4px; }
+  .role { font-size: 11px; color: #a99b8b; margin: 0 0 16px; max-width: 74ch; line-height: 1.6; }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .card { border-radius: 10px; padding: 20px 22px 18px; }
+  .card.light { background: var(--cream); color: var(--ink); }
+  .card.paper { background: var(--paper); color: var(--ink); }
+  .card.dark  { background: var(--backdrop-lab); color: var(--cream); border: 1px solid #3a342d; }
+  .card.dusk  { background: var(--dusk); color: var(--cream); }
+  .tag { font: 400 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; opacity: .6; margin-bottom: 14px; display: flex; justify-content: space-between; gap: 8px; }
+  .note { font-size: 11px; opacity: .7; margin: 12px 0 0; line-height: 1.55; }
+  code { background: rgba(127,127,127,.18); padding: 1px 5px; border-radius: 3px; }
+
+  /* swatches */
+  .strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 10px; }
+  .sw { cursor: pointer; font-size: 10px; line-height: 1.4; }
+  .sw .chip9 { height: 62px; border-radius: 6px; box-shadow: inset 0 0 0 1px rgba(127,127,127,.28); margin-bottom: 6px; position: relative; }
+  .sw .hex { letter-spacing: .03em; }
+  .sw .nm { font-weight: 700; }
+  .sw .meta { opacity: .6; }
+  .sw.copied .hex::after { content: "  copied"; color: var(--green); }
+  .badge { display: inline-block; font-size: 9px; letter-spacing: .06em; text-transform: uppercase; padding: 1px 5px; border-radius: 3px; margin-left: 4px; vertical-align: 1px; }
+  .badge.kept { background: rgba(95,168,140,.25); }
+  .badge.new  { background: rgba(229,138,138,.3); }
+
+  /* palette groups */
+  .grp { margin-bottom: 22px; }
+  .grp h3 { font: 400 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; opacity: .6; margin: 0 0 10px; }
+
+  /* mocks */
+  .wordmark { font-family: "Young Serif", Georgia, serif; font-size: 34px; line-height: 1.05; margin: 0 0 14px; }
+  .chip { position: relative; display: inline-block; background: #fff8e8; padding: 9px 16px 8px; border-radius: 3px; transform: rotate(-2deg);
+          box-shadow: 0 2px 0 rgba(74,59,52,.15), 0 6px 14px rgba(0,0,0,.12); color: var(--ink);
+          font: 700 12px "DM Sans", sans-serif; letter-spacing: .14em; text-transform: uppercase; margin-right: 12px; }
+  .chip::before { content: ""; position: absolute; top: -7px; left: 50%; width: 42px; height: 14px; margin-left: -21px; background: rgba(229,138,138,.65); transform: rotate(3deg); }
+  .chip.g::before { background: rgba(95,168,140,.6); }
+  .chip.s::before { background: rgba(104,160,209,.65); }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; margin: 18px 0 14px; }
+  .btn { font: 400 12px "DM Sans", sans-serif; letter-spacing: .04em; border-radius: 999px; padding: 7px 14px; border: 1.5px solid; }
+  .on-light .btn { color: var(--ink); background: #fff; border-color: rgba(74,59,52,.35); }
+  .on-light .btn.pri { background: var(--terracotta); border-color: var(--terracotta); color: var(--cream); }
+  .on-light .btn.acc { background: #fff; border-color: var(--pink); border-width: 2.5px; color: var(--ink); }
+  .on-dark .btn { color: var(--cream); background: transparent; border-color: rgba(251,247,238,.45); }
+  .on-dark .btn.pri { background: var(--pink); border-color: var(--pink); color: var(--backdrop); }
+  .on-dark .btn.acc { background: var(--butter); border-color: var(--butter); color: var(--backdrop); }
+  .body { font: 400 14px/1.55 "DM Sans", sans-serif; margin: 0 0 4px; }
+  .soft { font: 400 12px/1.5 "DM Sans", sans-serif; margin: 0; }
+  .on-light .soft { color: var(--ink-soft); }
+  .on-dark .soft { color: var(--muted-on-dark); }
+  .mini-tube { display: flex; gap: 12px; align-items: stretch; margin-top: 14px; font: 500 13px/1.25 "DM Sans", sans-serif; }
+  .mini-tube i { width: 46px; border-radius: 3px; display: block; box-shadow: inset 0 0 0 1px rgba(127,127,127,.3); }
+  .mini-tube b { font-weight: 700; }
+  .tape { display: inline-block; background: #efe6cf; padding: 6px 14px; transform: rotate(-1.5deg); border-top: 1px dashed rgba(74,59,52,.25); border-bottom: 1px dashed rgba(74,59,52,.25);
+          box-shadow: 0 1px 3px rgba(0,0,0,.12); color: #3d3a55; font: 700 13px "Nunito", sans-serif; letter-spacing: .06em; margin-top: 12px; }
+
+  /* contrast table */
+  table { border-collapse: collapse; width: 100%; font-size: 11px; }
+  th { text-align: left; font-weight: 400; opacity: .55; letter-spacing: .08em; text-transform: uppercase; font-size: 10px; padding: 0 10px 8px 0; }
+  td { padding: 7px 10px 7px 0; border-top: 1px solid rgba(127,127,127,.22); vertical-align: middle; }
+  .pair { display: inline-flex; align-items: center; justify-content: center; width: 54px; height: 26px; border-radius: 4px; font: 700 12px "DM Sans", sans-serif; box-shadow: inset 0 0 0 1px rgba(127,127,127,.3); }
+  .ok  { color: #6fc59f; } .mid { color: #e3c46a; } .bad { color: #e58a8a; }
+
+  /* room moods */
+  .mood { border-radius: 10px; overflow: hidden; background: var(--backdrop-lab); border: 1px solid #3a342d; }
+  .mood .top { height: 78px; display: flex; }
+  .mood .top div { flex: 1; }
+  .mood .bot { padding: 14px 16px 16px; font-size: 11px; line-height: 1.55; }
+  .mood h4 { font: 400 15px "Young Serif", Georgia, serif; margin: 0 0 6px; color: var(--cream); }
+
+  .q { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; }
+  .pair2 { display: flex; gap: 10px; margin: 12px 0 6px; }
+  .pair2 .sw { flex: 1; }
+  footer { margin-top: 64px; font-size: 11px; color: #a99b8b; line-height: 1.7; }
+</style>
+</head>
+<body>
+
+<h1>paint-a-pint / colour specimen</h1>
+<p class="lede"><b>The original 14-token palette, kept as the palette of record</b> (see DESIGN.md). A later trimmed 10-token version and one-accent schemes live in colour-specimen.html. Docs only, not bundled by Vite. Click any swatch to copy its hex. Fonts load from Google Fonts, so you need to be online.</p>
+<p class="lede"><b>How the sampling works.</b> I clustered the pixels of 32 images (your paintings, desk photos, and the room inspo) in Lab colour space, keeping only the <i>colourful</i> pixels so walls and shadows don't drown the result. The percentages are each colour's share of those colourful pixels. These are phone photos and screenshots, so white balance and compression shift things: treat them as direction, not gospel.</p>
+
+<!-- ============ 1 ============ -->
+<h2>1 · What your photos actually contain</h2>
+<p class="role">Three sources, three moods. The grey/brown neutrals dominate every frame; the strip below each title is what's left once those are removed.</p>
+
+<div class="grp card dark"><div class="tag"><span>Your paintings</span><span>17 images · canvas/progress + painting_examples</span></div><div class="strip" id="s-paintings"></div>
+<p class="note">Sky blues, an ultramarine, two leaf greens, warm sand and a terracotta brown. This is the impressionist target: what the player's own strokes should be able to reach.</p></div>
+
+<div class="grp card dark"><div class="tag"><span>Your desks</span><span>7 images · diorama/</span></div><div class="strip" id="s-desk"></div>
+<p class="note">Mahogany desk (the two big reds), wood and sand, a dusty blush, sage and moss from the trees outside, the blue mug.</p></div>
+
+<div class="grp card dark"><div class="tag"><span>Room inspo</span><span>8 images · Teracy screenshots</span></div><div class="strip" id="s-inspo"></div>
+<p class="note">Dusk indigo (the fridge backdrop, 30% of all colourful pixels), lamp khaki and butter, plant green, a dusty red. The lilac at the end is a tiny 0% cluster.</p></div>
+
+<div class="grp card dark"><div class="tag"><span>Dominant neutrals</span><span>hand-picked from the whole-image clusters</span></div><div class="strip" id="s-neutrals"></div>
+<p class="note">Warm all the way down. Note the darkest one, <code>#201d17</code>, is almost exactly the <code>#1c1915</code> the room page already uses as its backdrop.</p></div>
+
+<!-- ============ 2 ============ -->
+<h2>2 · Proposed UI palette</h2>
+<p class="role">Fourteen tokens. <span class="badge kept">kept</span> means it's already in the code and unchanged; <span class="badge new">new</span> means it's proposed, with the sampled source in the label. The chrome stays quiet on purpose: your actual tubes (below) should be the loudest colours on screen.</p>
+
+<div class="card light">
+  <div class="grp"><h3>Surfaces · light</h3><div class="strip" id="p-surface"></div></div>
+  <div class="grp"><h3>Ink · text on light</h3><div class="strip" id="p-ink"></div></div>
+  <div class="grp"><h3>Night · dark backgrounds and text on dark</h3><div class="strip" id="p-night"></div></div>
+  <div class="grp" style="margin-bottom:0"><h3>Accents</h3><div class="strip" id="p-accent"></div></div>
+</div>
+
+<p class="role" style="margin-top:22px">For scale: the nine tubes currently in <code>src/brush/paints.js</code> (a copy of the hexes, the file is the source of truth). There's no green tube, so every leaf in a painting is a mix, which is one reason not to add more greens to the UI.</p>
+<div class="card dark"><div class="strip" id="p-tubes"></div></div>
+
+<!-- ============ 3 ============ -->
+<h2>3 · The palette in use</h2>
+<p class="role">The same components on the four surfaces, using the chosen fonts (Young Serif, DM Sans, Nunito). The chip and tape stay paper-coloured on every background: they're physical objects sitting in the scene, not themed UI.</p>
+<div class="row">
+  <div class="card light on-light"><div class="tag"><span>on cream</span><span>--cream</span></div>
+    <p class="wordmark" style="color:var(--ink)">my waterloo room</p>
+    <span class="chip">Menu ▾</span><span class="chip g">Palette</span>
+    <div class="btns"><span class="btn">clean brush</span><span class="btn acc">new canvas</span><span class="btn pri">dry: on</span></div>
+    <p class="body">Bristles shove open paint into ridges.</p><p class="soft">Secondary text uses --ink-soft.</p>
+    <div class="mini-tube"><i style="background:#b5332e"></i><div>PR112<br>Naphthol red medium <b>++ 396</b></div></div>
+  </div>
+  <div class="card paper on-light"><div class="tag"><span>on paper</span><span>--paper</span></div>
+    <p class="wordmark" style="color:var(--ink)">swiss alps</p>
+    <span class="chip s">Menu ▾</span><span class="chip">Palette</span>
+    <div class="btns"><span class="btn">clean brush</span><span class="btn acc">new canvas</span><span class="btn pri">dry: on</span></div>
+    <p class="body">Let it dry a few minutes and it stops moving.</p><p class="soft">Secondary text uses --ink-soft.</p>
+    <span class="tape">W16.2 × L22.5 cm</span>
+  </div>
+  <div class="card dark on-dark"><div class="tag"><span>on backdrop</span><span>--backdrop-lab</span></div>
+    <p class="wordmark" style="color:var(--cream)">my home room</p>
+    <span class="chip">Menu ▾</span><span class="chip g">Palette</span>
+    <div class="btns"><span class="btn">clean brush</span><span class="btn acc">new canvas</span><span class="btn pri">dry: on</span></div>
+    <p class="body" style="color:var(--cream)">Wash the brush before you change colour.</p><p class="soft">Secondary text uses --muted-on-dark.</p>
+  </div>
+  <div class="card dusk on-dark"><div class="tag"><span>on dusk</span><span>--dusk</span></div>
+    <p class="wordmark" style="color:var(--butter)">evening</p>
+    <span class="chip s">Menu ▾</span><span class="chip">Palette</span>
+    <div class="btns"><span class="btn">clean brush</span><span class="btn acc">new canvas</span><span class="btn pri">dry: on</span></div>
+    <p class="body" style="color:var(--cream)">The fridge-backdrop mood from the inspo.</p><p class="soft" style="color:#cfcbe6">Pink text on dusk is only 3.8:1: fills, not words.</p>
+  </div>
+</div>
+
+<!-- ============ 4 ============ -->
+<h2>4 · Contrast: what may be used as text</h2>
+<p class="role">Computed live in this page (WCAG 2.x). Small text needs 4.5:1. The rule that falls out: <b>pink, green and sky are fills and tape, never small text on light surfaces.</b> Put the label on cream next to the colour, or use terracotta / ultramarine for coloured text.</p>
+<div class="card light"><table id="ctable"><thead><tr><th>sample</th><th>text</th><th>on</th><th>ratio</th><th>verdict</th></tr></thead><tbody></tbody></table></div>
+
+<!-- ============ 5 ============ -->
+<h2>5 · Room moods (optional)</h2>
+<p class="role">You mentioned different rooms: alps, Waterloo, home. One option: the chrome stays constant and only the accent pair shifts with the room. Which photo is which room is my guess; the colours come from the samples above.</p>
+<div class="row">
+  <div class="mood"><div class="top" id="m-alps"></div><div class="bot"><h4>swiss alps</h4>sky <code>#68a0d1</code> + ultramarine <code>#335295</code>, from your paintings. Cool, open, daylight.</div></div>
+  <div class="mood"><div class="top" id="m-waterloo"></div><div class="bot"><h4>my waterloo room</h4>mint <code>#5fa88c</code> (already in the UI) + sage <code>#b3bd84</code> + mug blue <code>#5680af</code>, from the window view and desk.</div></div>
+  <div class="mood"><div class="top" id="m-home"></div><div class="bot"><h4>my home room</h4>terracotta <code>#954a33</code> + dusty rose <code>#bc786a</code> + lamp butter <code>#ecdcaa</code>, from the mahogany desk and lamp light.</div></div>
+</div>
+
+<!-- ============ 6 ============ -->
+<h2>6 · Decisions for you</h2>
+<p class="role">The three places where the samples don't force an answer.</p>
+<div class="q">
+  <div class="card light"><div class="tag"><span>1 · the green</span></div>
+    <div class="pair2"><div class="sw" data-hex="#5fa88c"></div><div class="sw" data-hex="#658a43"></div></div>
+    <p class="note" style="opacity:.85">Keep the current cool mint (it matches the inspo chair), or shift to the yellower leaf green your paintings and window trees use? Leaf is the truer match to the photos; mint is already in the app and reads friendlier next to the pink.</p></div>
+  <div class="card light"><div class="tag"><span>2 · a second night surface</span></div>
+    <div class="pair2"><div class="sw" data-hex="#1c1915"></div><div class="sw" data-hex="#404070"></div></div>
+    <p class="note" style="opacity:.85">Warm near-black only, or also the dusk indigo for a menu / evening mood? Dusk is the strongest single colour in the inspo, but pink text on it is weak (3.8:1).</p></div>
+  <div class="card light"><div class="tag"><span>3 · do rooms recolour the UI?</span></div>
+    <div class="pair2"><div class="sw" data-hex="#e58a8a" data-name="always pink"></div><div class="sw" data-hex="#68a0d1" data-name="alps: sky"></div></div>
+    <p class="note" style="opacity:.85">One fixed UI palette (simpler, consistent), or the accent pair shifts per room (section 5)? Either is cheap now and costly to retrofit.</p></div>
+</div>
+
+<footer>
+  Sample data is embedded in this file (colourful-pixel clusters per source group, k-means in Lab space, k=9), generated by a one-off script that is not kept in the repo.<br>
+  Source images may move around while the repo is being reorganised, so this page deliberately embeds no thumbnails.
+</footer>
+
+<script>
+const SAMPLES = {"paintings": [{"hex": "#68a0d1", "share": 0.178}, {"hex": "#c7986e", "share": 0.142}, {"hex": "#4882c2", "share": 0.129}, {"hex": "#335295", "share": 0.124}, {"hex": "#658a43", "share": 0.113}, {"hex": "#49673a", "share": 0.104}, {"hex": "#834e31", "share": 0.072}, {"hex": "#9ab554", "share": 0.07}, {"hex": "#8b98cb", "share": 0.068}], "desk": [{"hex": "#784131", "share": 0.225}, {"hex": "#b29762", "share": 0.223}, {"hex": "#954a33", "share": 0.204}, {"hex": "#bc786a", "share": 0.095}, {"hex": "#957248", "share": 0.083}, {"hex": "#ebc28a", "share": 0.075}, {"hex": "#b3bd84", "share": 0.043}, {"hex": "#617540", "share": 0.03}, {"hex": "#5680af", "share": 0.022}], "inspo": [{"hex": "#404070", "share": 0.306}, {"hex": "#9b8354", "share": 0.253}, {"hex": "#856b43", "share": 0.152}, {"hex": "#cda774", "share": 0.081}, {"hex": "#cfc18c", "share": 0.073}, {"hex": "#63542c", "share": 0.067}, {"hex": "#60793b", "share": 0.039}, {"hex": "#994d42", "share": 0.027}, {"hex": "#bb85b3", "share": 0.003}]};
+
+const $ = (s) => document.querySelector(s);
+function hexToRgb(h) { h = h.replace('#',''); return [0,2,4].map(i => parseInt(h.slice(i,i+2),16)); }
+function lum(h) { const [r,g,b] = hexToRgb(h).map(v => { v/=255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055,2.4); }); return 0.2126*r+0.7152*g+0.0722*b; }
+function ratio(a,b) { let la=lum(a), lb=lum(b); if (la<lb) [la,lb]=[lb,la]; return (la+0.05)/(lb+0.05); }
+function verdict(r) { return r>=7 ? ['AAA','ok'] : r>=4.5 ? ['AA','ok'] : r>=3 ? ['large text / UI only','mid'] : ['fill only, not text','bad']; }
+
+function sw(hex, o={}) {
+  const d = document.createElement('div'); d.className = 'sw'; d.dataset.hex = hex;
+  d.innerHTML = `<div class="chip9" style="background:${hex}"></div>` +
+    (o.name ? `<div class="nm">${o.name}${o.badge ? `<span class="badge ${o.badge}">${o.badge}</span>` : ''}</div>` : '') +
+    `<div class="hex">${hex}</div>` + (o.meta ? `<div class="meta">${o.meta}</div>` : '');
+  d.addEventListener('click', () => { navigator.clipboard?.writeText(hex).catch(()=>{}); d.classList.add('copied'); setTimeout(()=>d.classList.remove('copied'),1200); });
+  return d;
+}
+function fill(sel, items) { const el = $(sel); items.forEach(i => el.appendChild(sw(i.hex, i))); }
+
+// 1. sampled
+for (const g of ['paintings','desk','inspo']) fill('#s-'+g, SAMPLES[g].map(c => ({hex:c.hex, meta:`${Math.round(c.share*100)}%`})));
+fill('#s-neutrals', ['#201d17','#372d20','#43342d','#736960','#a59a8e','#cdcfca','#e5caa5','#efe5cd','#fef9e9'].map(h => ({hex:h})));
+
+// 2. proposed tokens
+fill('#p-surface', [
+  {hex:'#fbf7ee', name:'--cream', badge:'kept', meta:'cards, chips'},
+  {hex:'#f6efdd', name:'--paper', badge:'kept', meta:'canvas surface'},
+  {hex:'#ecdcaa', name:'--butter', badge:'new', meta:'lamp glow · inspo #cfc18c / desk #ebc28a, lightened'},
+]);
+fill('#p-ink', [
+  {hex:'#4a3b34', name:'--ink', badge:'kept', meta:'9.99:1 on cream'},
+  {hex:'#756558', name:'--ink-soft', badge:'new', meta:'secondary text · 5.23:1 on cream'},
+]);
+fill('#p-night', [
+  {hex:'#1c1915', name:'--backdrop', badge:'kept', meta:'matches inspo #201d17'},
+  {hex:'#2b2622', name:'--backdrop-lab', badge:'kept', meta:'lab page'},
+  {hex:'#404070', name:'--dusk', badge:'new', meta:'sampled: inspo fridge indigo'},
+  {hex:'#cdbfae', name:'--muted-on-dark', badge:'kept', meta:'9.72:1 on backdrop'},
+]);
+fill('#p-accent', [
+  {hex:'#e58a8a', name:'--pink', badge:'kept', meta:'fill / tape only on light'},
+  {hex:'#954a33', name:'--terracotta', badge:'new', meta:'sampled: desk mahogany · text-safe'},
+  {hex:'#5fa88c', name:'--green', badge:'kept', meta:'fill only on light'},
+  {hex:'#68a0d1', name:'--sky', badge:'new', meta:'sampled: paintings · fill only on light'},
+  {hex:'#335295', name:'--ultramarine', badge:'new', meta:'sampled: paintings · text-safe'},
+]);
+fill('#p-tubes', [
+  ['titanium white','#f3f3ef'],['lemon yellow','#ead848'],['azo yellow','#dfac46'],['naples yellow','#d5cebd'],['naphthol red','#b5332e'],
+  ['permanent magenta','#601529'],['burnt sienna','#622b22'],["king's blue",'#3c79b4'],['prussian blue hue','#111424'],
+].map(([name,hex]) => ({hex, name})));
+
+// 4. contrast table
+const rows = [
+  ['ink','#4a3b34','#fbf7ee','cream'], ['ink','#4a3b34','#f6efdd','paper'],
+  ['ink-soft','#756558','#fbf7ee','cream'], ['ink-soft','#756558','#f6efdd','paper'],
+  ['terracotta','#954a33','#fbf7ee','cream'], ['ultramarine','#335295','#fbf7ee','cream'],
+  ['pink','#e58a8a','#fbf7ee','cream'], ['green','#5fa88c','#fbf7ee','cream'], ['sky','#68a0d1','#fbf7ee','cream'],
+  ['cream','#fbf7ee','#1c1915','backdrop'], ['muted-on-dark','#cdbfae','#1c1915','backdrop'],
+  ['pink','#e58a8a','#1c1915','backdrop'], ['sky','#68a0d1','#1c1915','backdrop'], ['butter','#ecdcaa','#1c1915','backdrop'],
+  ['cream','#fbf7ee','#404070','dusk'], ['butter','#ecdcaa','#404070','dusk'], ['pink','#e58a8a','#404070','dusk'],
+  ['cream','#fbf7ee','#954a33','terracotta fill'], ['ink','#4a3b34','#e58a8a','pink fill'], ['ink','#4a3b34','#5fa88c','green fill'],
+];
+const tb = $('#ctable tbody');
+for (const [n,fg,bg,on] of rows) {
+  const r = ratio(fg,bg), [v,c] = verdict(r);
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td>${n} <code>${fg}</code></td><td><span class="pair" style="background:${bg};color:${fg}">Aa</span></td><td>${on} <code>${bg}</code></td><td>${r.toFixed(2)}:1</td><td class="${c}">${v}</td>`;
+  tb.appendChild(tr);
+}
+
+// 5. moods
+const mood = (id, cols) => { const el = $(id); cols.forEach(c => { const d = document.createElement('div'); d.style.background = c; el.appendChild(d); }); };
+mood('#m-alps', ['#68a0d1','#335295','#658a43','#c7986e']);
+mood('#m-waterloo', ['#5fa88c','#b3bd84','#5680af','#617540']);
+mood('#m-home', ['#954a33','#bc786a','#ecdcaa','#784131']);
+
+// 6. decision swatches
+document.querySelectorAll('.pair2 .sw').forEach(el => { const h = el.dataset.hex; const d = sw(h, {name: el.dataset.name}); el.replaceWith(d); d.style.flex = '1'; });
+</script>
+</body>
+</html>
