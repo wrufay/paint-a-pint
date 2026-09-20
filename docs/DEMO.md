@@ -21,7 +21,7 @@ Judging is a live demo (originality, UX, technical complexity, WOW), so the demo
 
 **0:55 - the room (15 s).** Click **lay it flat**: the canvas goes down on the desk and the camera goes bird's-eye, like painting at a real desk. Say: *"And the paint is lit by the room, so thickness reads as thickness."* Click **stand it up** if you want the easel view again.
 
-**1:10 - the ending (10 s).** Click **hang it up & go back**. The painting appears in a frame on the wall. Say: *"Zero cost, zero cleanup. It's for people who want to paint and don't want the friction."* Optionally mention what's next: a real mixing palette, palette knives, a Wacom.
+**1:10 - the ending (10 s).** Click **hang it up & go back**. The painting appears in a frame on the wall. Say: *"Zero cost, zero cleanup. It's for people who want to paint and don't want the friction."* Optionally mention what's next: a real mixing palette (the styrofoam tray), masking tape, a Wacom.
 
 ## Things that can go wrong on stage
 

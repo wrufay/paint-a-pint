@@ -12,7 +12,7 @@ Items marked *confirm* are things this file cannot know (portal wording, your ba
 - [ ] **No personal or third-party files in the repo you would not want public:** the reference and room photos, and the manufacturers' swatch images in `paints/` (do not commit those). Run `git status` and read the list before pushing.
 - [ ] **Devpost project** (or whatever the portal is) filled in: title, one-line pitch, description, built-with (Three.js, Vite, JavaScript, Spectral.js), links (live URL, repo). *confirm*
 - [ ] **Badge ID / team details** entered as the portal asks. *confirm*
-- [ ] **Devpost "what's next"** mentions: real mixing palette (the styrofoam tray), palette knives, masking tape, Wacom, choosing where paintings hang, other rooms.
+- [ ] **Devpost "what's next"** mentions: real mixing palette (the styrofoam tray), masking tape, Wacom, choosing where paintings hang, other rooms.
 
 ## Should have
 
