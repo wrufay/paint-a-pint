@@ -56,7 +56,8 @@
   --radius-pill: 999px;
   --radius-card: 10px;
   --radius-chip: 3px;
-  --border-btn: 1.5px solid rgba(74, 59, 52, 0.35);
+  --line: rgba(74, 59, 52, 0.35);  /* hairlines: button outlines, dashed section rules */
+  --border-btn: 1.5px solid var(--line);
 
   /* ---- taped-paper chip ---- */
   --chip-bg: #fff8e8;
