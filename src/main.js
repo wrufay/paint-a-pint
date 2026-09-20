@@ -5,7 +5,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { buildRoom } from './room.js';
-import { Painter, initPaintUI } from './paint.js';
+import { AcrylicPainter, initAcrylicUI } from './acrylic-painter.js';
 
 const BG = 0x1c1915;
 const app = document.getElementById('app');
@@ -50,9 +50,10 @@ composer.addPass(new OutputPass());
 
 // ── world ────────────────────────────────────────────────────────────────────
 const world = buildRoom(scene);
-const painter = new Painter(document.getElementById('paint-canvas'), document.getElementById('grain'));
-const blankTex = () => { const t = new THREE.CanvasTexture(painter.composite()); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
-world.canvasMat.map = blankTex();
+const painter = new AcrylicPainter(document.getElementById('paint-canvas'), document.getElementById('grain'));
+// the easel shows the live painting canvas, so paint keeps drying (and showing it) while you look around the room
+const paintTex = new THREE.CanvasTexture(painter.canvas); paintTex.colorSpace = THREE.SRGBColorSpace; paintTex.anisotropy = 8;
+world.canvasMat.map = paintTex;
 
 // ── state machine: room → travelling → paint → travelling → room ─────────────
 let mode = 'room';
@@ -151,12 +152,12 @@ function leavePaint() {
       const slot = world.hang(hung);
       slot.popT = performance.now();
       painter.clear();
-      world.canvasMat.map.dispose(); world.canvasMat.map = blankTex(); world.canvasMat.needsUpdate = true;
+      paintTex.needsUpdate = true;
     }
   });
 }
 
-initPaintUI(painter, { onBack: leavePaint });
+initAcrylicUI(painter, { onBack: leavePaint });
 addEventListener('keydown', (e) => { if (e.key === 'Escape') leavePaint(); });
 
 // ── picking ──────────────────────────────────────────────────────────────────
@@ -183,6 +184,7 @@ renderer.domElement.addEventListener('pointerup', (e) => {
 renderer.domElement.addEventListener('pointercancel', () => { downAt = null; });
 
 // ── loop ─────────────────────────────────────────────────────────────────────
+let texT = 0;
 const sph = new THREE.Spherical(), off = new THREE.Vector3(), tmp = new THREE.Vector3();
 function frame(now) {
   requestAnimationFrame(frame);
@@ -203,6 +205,10 @@ function frame(now) {
     camera.position.copy(tmp); camera.lookAt(HOME.target);
     camera.fov = HOME.fov; camera.updateProjectionMatrix();
   }
+
+  painter.tick(now);
+  // the 3D easel only needs the new pixels when it can be seen (the paint overlay hides it), and not every frame
+  if (mode !== 'paint' && painter.changed && now - texT > 100) { paintTex.needsUpdate = true; painter.changed = false; texT = now; }
 
   for (const f of world.frames) { // little pop when a painting lands on the wall
     if (f.popT < 0) continue;
