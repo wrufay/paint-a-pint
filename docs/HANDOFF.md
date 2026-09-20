@@ -58,7 +58,7 @@ Click the easel: camera travels in, paint overlay appears (centred, ~17% bigger 
 - The visible colour is one value per pixel, so a paint/ground mix is stored as one colour. The `lumPow` patch fixes most of the chalky look, but bristles still pick up a paint+ground mix (guarded by "does this pixel look like bare gesso"). The full fix (separate ground / wet colour / coverage) is task T10.
 - Drying times, thickness scale, tinting strengths and Galeria opacities are guesses. No measurements exist.
 - Nothing was profiled on an iPad. Node numbers: a fast stroke is ~4 ms per 30 px of travel (flat), round brush ~1.8x that.
-- The lift-and-turn animation between easel and desk was never watched running (headless is far too slow); only start and end poses were checked.
+- The lift-and-turn animation between easel and desk was never watched running; only start and end poses were checked.
 - A wetness-toggle "switching back and forth bug" the user mentioned could not be reproduced in the engine (toggling off restores the exact pixels).
 - Undo is one level. The card has many buttons (the user says it "doesn't look intentional", see T3).
 
@@ -66,23 +66,23 @@ Click the easel: camera travels in, paint overlay appears (centred, ~17% bigger 
 
 **Node (fast, no browser):** `node tools/dry-test.mjs`, `node tools/mix-test.mjs`, `node tools/render-test.mjs out.png`, `node tools/brush-shapes.mjs out.png`. Read the PNGs with the Read tool and compare against the reference art. Build check: `npx vite build`.
 
-**Real browser (slow but real):** headless Chrome renders the 3D room in software (~1 fps), so every run takes 1 to 4 minutes. Install the driver *outside the repo*: `mkdir -p /tmp/drv && cd /tmp/drv && npm init -y && npm i puppeteer-core` (do not add it to `package.json`). Then:
+**Real browser (fast if you use the real GPU):** drive headless Chrome with `puppeteer-core`, installed *outside the repo*: `mkdir -p /tmp/drv && cd /tmp/drv && npm init -y && npm i puppeteer-core` (do not add it to `package.json`). **Do not pass software-rendering flags** (`--use-angle=swiftshader`, `--enable-unsafe-swiftshader`): an earlier version of this file did, which forced the 3D room onto the CPU and made every check take minutes. Headless Chrome on this Mac uses the real GPU (Apple M3 Pro, measured 60 fps), and a whole enter-paint / paint / leave / hang check takes about 6 seconds.
 ```js
 import puppeteer from 'puppeteer-core';
 const browser = await puppeteer.launch({
   executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  headless: 'new', args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--window-size=1280,760'],
-  defaultViewport: { width: 1280, height: 760 },
+  headless: 'new', args: ['--window-size=1280,760'], defaultViewport: { width: 1280, height: 760 },
 });
 // ...goto the dev server, then:
-await page.waitForFunction(() => window.__paint, { timeout: 30000, polling: 250 }); // polling must be a number: the default (per frame) stalls
+await page.waitForFunction(() => window.__paint, { timeout: 60000, polling: 100 }); // give polling a number of ms
 await page.evaluate(() => window.__paint.enterPaint());
-await page.waitForFunction(() => window.__paint.mode === 'paint', { timeout: 120000, polling: 250 });
+await page.waitForFunction(() => window.__paint.mode === 'paint', { timeout: 60000, polling: 50 });
 ```
+- **If a browser check takes more than about a minute, stop and diagnose** (`ps`, a timeout, fewer mouse moves) instead of waiting. Put a hard `timeout` on every `waitForFunction`, and close the browser in a `finally`.
 - Start the dev server with `npx vite --port 5199 --strictPort` in the background. **Do not edit source files while a browser run is in progress** (Vite reloads the page under it).
 - Run drivers in the background and watch for completion (the Monitor tool with an `until grep ...` loop); print results with `console.log` and end with an `errors:` line so you know it finished.
 - Hook: `window.__paint = { enterPaint, leavePaint(hang), painter, world, camera, uploadPaint, mode }`. `painter.engine` is the `PaintEngine`. To see the 3D easel large while in paint mode: `painter.tick(performance.now()); __paint.uploadPaint(); document.getElementById('paint').style.opacity = 0`.
-- Use few, short mouse moves (`steps: 10`), since every move waits on a slow frame.
+- Keep mouse moves modest (`steps: 10` to 12); 120 moves took about 2.5 s on the GPU.
 
 ## 6. The plan (run in this order; commit after each task)
 
