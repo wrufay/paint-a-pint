@@ -35,17 +35,17 @@ npm run dev
 
 Large mobile device use (e.g. IPad with Apple Pencil) or desktop ideally paired with a drawing tablet, such as [Wacom Intuos](https://www.wacom.com/en-us/products/pen-tablets/wacom-intuos).
 
-## Known limitations
+## Limitations
 
 The numbers behind calculations such as that for drying times and paint thickness are **educated guesses** tuned by eye against a handfull of my own paintings.
 
 Hence, are not true measurements and are not intended to yield exact real-world behaviour.
 
-## Particularly proud of
+## Proud of
 
 **Paint mixing on the canvas**: My biggest fear for this project was having it end up as a digital art tool with no differentiator, but seeing the painting mix made me feel like I was back on a real canvas.
 
-## Folder layout
+## Layout
 
 |                                            |                                                                                        |
 | ------------------------------------------ | -------------------------------------------------------------------------------------- |
