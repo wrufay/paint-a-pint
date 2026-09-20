@@ -68,7 +68,7 @@ Pigment mixing tables come from [Spectral.js](https://github.com/rvanwijnen/spec
 
 [Windsor & Newton Galeria](https://www.winsornewton.com/en-ca/collections/galeria-acrylic) and [Amsterdam](https://www.royaltalens.com/collections/amsterdam-standard-series-acrylics) acrylics for being the best cost affordable acrylics that carried me through years of silly painting. **Reference images and exact colour codes of paints I own were used to generate the 3D tubes.**
 
-## What's next
+## More soon
 
 - **Two books** on the desk that users can click: one an _app tutorial_ and the other an _art tutorial_. I want to share my own (minimal) expertise to make creating art more accessible, less intimidating, and ultimately **playful**.
 - Opinions on an **AI guide?** 💭
