@@ -15,19 +15,18 @@ No backend. Plain JS modules, Vite and Three.js.
 
 ## How to paint
 
-Click the easel (or a tube). The canvas lies down flat on the desk and the camera goes overhead: the paint tubes are on the left, a mixing tray is under the canvas, and a card with the tools is on the right. **stand it up** puts the canvas back on the easel for a bigger, closer view.
+Click the easel. The camera moves in and a card appears with the paints.
 
 | | |
 |---|---|
-| paint | click a **tube** on the desk (hover it for its colour, opacity and what it is good for), or press **1**-**9**; the easel view has swatches instead |
+| paint | click a colour, or press **1**-**9** (card order) |
 | brush | flat, filbert (oval, width follows pressure), round (click for a dab) or palette knife (flat planes with a raised edge) |
 | size | the slider, or **[** and **]** |
 | undo | **z**, many steps back (up to 40) |
-| tubes and brushes on the desk | click a **tube** to pick that paint and a **brush** to pick that shape, in the room or in paint mode; the chosen paint's tube lifts off the pile |
-| mixing tray | the tray under the canvas: with **squeeze**, tap or drag on it to squeeze the chosen tube's paint exactly where you want it; with **mix & pick**, drag to mix with a knife and tap a colour to load your brush with it |
+| mixing palette | **p**, or the button: a tray to squeeze paints onto, mix on with a knife, and tap a colour from to load your brush |
 | wetness view | **w**: blue = still workable, orange = getting tacky, no tint = dry |
 | dry now | skips the wait: everything wet becomes dry paint |
-| stand it up / lay it flat | the canvas stands on the easel (close-up), or lies flat on the desk (the default, with the tubes and tray) |
+| lay it flat / stand it up | puts the canvas on the desk for a bird's-eye view, and back on the easel |
 | esc | back to the room; the painting stays on the easel and keeps drying |
 | hang it up & go back | hangs the painting on the wall and clears the easel |
 | settings | plain-language sliders (how runny, how much paint, drying speed, ridges, texture, fast-forward time), with the raw ones under "advanced" |
