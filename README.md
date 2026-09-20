@@ -59,7 +59,7 @@ Learning some Three.js!
 
 ![A painting made in paint-a-pint, shown on the overhead desk with the paint card on the left, tubes and brushes on the right, and a palette of mixed colours](docs/assets/artwork.png)
 
-_See the process of this painting [here](https://www.youtube.com/watch?v=0OMz45NClwk&feature=youtu.be) - my E7 hacking spot at sunrise_
+_See the painting process [here](https://www.youtube.com/watch?v=0OMz45NClwk&feature=youtu.be) - my E7 hacking spot at sunrise_
 
 ## Layout
 
