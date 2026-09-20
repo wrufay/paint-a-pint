@@ -143,13 +143,35 @@ function enterPaint() {
   if (mode !== 'room') return;
   mode = 'travelling';
   hover(false);
-  travel(withEasel(easelFlat, paintPose), () => {
+  // you always start at the standing easel; the card's button puts the canvas down flat on the desk (setView)
+  travel(paintPose(), () => {
     mode = 'paint';
     document.body.classList.remove('travelling'); document.body.classList.add('painting');
     layoutPaper();
     paintEl.classList.add('on');
-  }, { from: easelUp, to: easelFlat, legs: false });
+  });
 }
+
+// The two ways to paint: at the standing easel, or with the canvas put down flat on the desk (bird's-eye view).
+// Switching happens inside paint mode: the paper fades out, the easel and camera move, the paper fades back in.
+let deskMode = false;
+const view = {
+  get down() { return deskMode; },
+  onChange: () => {},
+  set(down) {
+    if (mode !== 'paint' || down === deskMode) return;
+    mode = 'travelling'; painter.up(); paintEl.classList.remove('on');
+    document.getElementById('cursor').style.opacity = 0;
+    const from = down ? easelUp : easelFlat, to = down ? easelFlat : easelUp;
+    deskMode = down; view.onChange();
+    travel(withEasel(to, paintPose), () => {
+      mode = 'paint';
+      document.body.classList.remove('travelling');
+      layoutPaper();
+      paintEl.classList.add('on');
+    }, { from, to, legs: !down });
+  },
+};
 
 // hang = true finishes the painting (it goes on the wall and the easel is cleared); false just steps back and leaves it drying on the easel
 function leavePaint(hang = true) {
@@ -160,6 +182,7 @@ function leavePaint(hang = true) {
   document.getElementById('cursor').style.opacity = 0;
   const hung = hang && painter.dirty ? painter.composite() : null;
   document.body.classList.remove('painting');
+  const wasDown = deskMode; deskMode = false; view.onChange();   // next time you start at the easel again
   travel(homePose(), () => {
     mode = 'room';
     document.body.classList.remove('travelling');
@@ -169,10 +192,10 @@ function leavePaint(hang = true) {
       painter.clear();
       uploadPaint();
     }
-  }, { from: easelFlat, to: easelUp, legs: true });
+  }, wasDown ? { from: easelFlat, to: easelUp, legs: true } : undefined);   // only lift the easel back up if it was put down
 }
 
-initAcrylicUI(painter, { onBack: () => leavePaint(true) });
+initAcrylicUI(painter, { onBack: () => leavePaint(true), view });
 addEventListener('keydown', (e) => { if (e.key === 'Escape') leavePaint(false); });
 
 // ── picking ──────────────────────────────────────────────────────────────────

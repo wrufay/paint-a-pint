@@ -114,7 +114,7 @@ export class AcrylicPainter {
 }
 
 // Wires the taped-note card to an AcrylicPainter and the pointer events on the paper element.
-export function initAcrylicUI(painter, { onBack }) {
+export function initAcrylicUI(painter, { onBack, view }) {
   const paper = document.getElementById('paper');
   const cursor = document.getElementById('cursor');
   const swatches = document.getElementById('swatches');
@@ -137,7 +137,7 @@ export function initAcrylicUI(painter, { onBack }) {
 
   // brush shape: flat, filbert (oval) or round (also gives single dabs)
   const shapes = document.createElement('div');
-  shapes.className = 'tools'; shapes.style.cssText = 'margin-top:8px;';
+  shapes.className = 'tools'; shapes.style.cssText = 'margin:8px 0;';   // gap above and below: the row under it (undo, dry now) has none of its own
   const shapeBtns = {};
   const syncShape = () => { for (const k in shapeBtns) shapeBtns[k].classList.toggle('sel', painter.engine.params.shape === k); };
   for (const k of ['flat', 'filbert', 'round']) {
@@ -163,7 +163,17 @@ export function initAcrylicUI(painter, { onBack }) {
   const wetHint = document.createElement('p');
   wetHint.textContent = 'blue = still workable · orange = getting tacky · no tint = dry';
   wetHint.style.cssText = 'display:none;margin:8px 0 0;font-size:11px;color:var(--ink-soft);text-align:center;';
+  // easel or desk: put the canvas down flat for a bird's-eye view, and stand it back up
+  let viewBtn = null;
+  if (view) {
+    viewBtn = document.createElement('button');
+    viewBtn.className = 'btn'; viewBtn.style.marginTop = '8px';
+    const syncView = () => { viewBtn.textContent = view.down ? 'stand it up' : 'lay it flat'; };
+    viewBtn.onclick = () => view.set(!view.down);
+    view.onChange = syncView; syncView();
+  }
   const back = document.getElementById('back');
+  if (viewBtn) back.parentNode.insertBefore(viewBtn, back);
   back.parentNode.insertBefore(extra, back); back.parentNode.insertBefore(wetHint, back);
 
   const esc = document.getElementById('esc'); if (esc) esc.textContent = 'esc: back to the room, painting stays on the easel';
