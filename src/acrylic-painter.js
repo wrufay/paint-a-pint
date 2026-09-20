@@ -13,8 +13,18 @@ export class AcrylicPainter {
     grainCanvas.style.display = 'none'; // the engine paints its own canvas weave
     this.engine = new PaintEngine({ width: w, height: h });
     this.img = new ImageData(this.engine.rgba, w, h);
+    // 3D easel maps: unlit colour + normals, so the room's lights shade the paint. They lag the canvas and are only
+    // copied out (syncMaps) when the room is actually on screen.
+    this.engine.enableMaps();
+    this.albedoCanvas = document.createElement('canvas'); this.albedoCanvas.width = w; this.albedoCanvas.height = h;
+    this.normalCanvas = document.createElement('canvas'); this.normalCanvas.width = w; this.normalCanvas.height = h;
+    this.albedoImg = new ImageData(this.engine.albedo, w, h);
+    this.normalImg = new ImageData(this.engine.normals, w, h);
+    this.mapRect = null;
     this.engine.renderAll();
     this.ctx.putImageData(this.img, 0, 0);
+    this.mapRect = { x: 0, y: 0, w, h };
+    this.syncMaps();
     this.changed = false; // canvas has new pixels since the room texture was last refreshed
 
     this.tool = 'brush';
@@ -67,7 +77,21 @@ export class AcrylicPainter {
 
   _blit(all) {
     const r = all ? this.engine.renderAll() : this.engine.render();
-    if (r) { this.ctx.putImageData(this.img, 0, 0, r.x, r.y, r.w, r.h); this.changed = true; }
+    if (!r) return;
+    this.ctx.putImageData(this.img, 0, 0, r.x, r.y, r.w, r.h);
+    this.changed = true;
+    const m = this.mapRect;
+    if (!m) this.mapRect = { ...r };
+    else { const x1 = Math.max(m.x + m.w, r.x + r.w), y1 = Math.max(m.y + m.h, r.y + r.h); m.x = Math.min(m.x, r.x); m.y = Math.min(m.y, r.y); m.w = x1 - m.x; m.h = y1 - m.y; }
+  }
+
+  // copy the changed part of the 3D maps into their canvases; returns whether anything moved
+  syncMaps() {
+    const m = this.mapRect; if (!m) return false;
+    this.albedoCanvas.getContext('2d').putImageData(this.albedoImg, 0, 0, m.x, m.y, m.w, m.h);
+    this.normalCanvas.getContext('2d').putImageData(this.normalImg, 0, 0, m.x, m.y, m.w, m.h);
+    this.mapRect = null;
+    return true;
   }
 
   // finished painting as a plain canvas (used for the wall frames)
@@ -101,6 +125,7 @@ export function initAcrylicUI(painter, { onBack }) {
   document.getElementById('dry').onclick = () => painter.dryNow();
   document.getElementById('clear').onclick = () => painter.clear();
   document.getElementById('back').onclick = onBack;
+  const esc = document.getElementById('esc'); if (esc) esc.textContent = 'esc: back to the room, painting stays on the easel';
   sync();
 
   const toCanvas = (e) => {

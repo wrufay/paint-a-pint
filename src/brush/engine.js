@@ -57,6 +57,11 @@ const smooth01 = (t) => { t = t < 0 ? 0 : t > 1 ? 1 : t; return t * t * (3 - 2 *
 
 export const srgbToLinear = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
 export const linearToSrgb = (c) => (c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055);
+// linear 0..1 -> sRGB 0..255 through a table: the shader calls this three times per pixel, so it must not pow()
+const SRGB_N = 4096, SRGB_LUT = new Float32Array(SRGB_N + 1);
+for (let i = 0; i <= SRGB_N; i++) SRGB_LUT[i] = linearToSrgb(i / SRGB_N) * 255;
+const toSrgb8 = (v) => SRGB_LUT[(v <= 0 ? 0 : v >= 1 ? SRGB_N : v * SRGB_N + 0.5) | 0];
+
 export function hexToLinear(hex) {
   const n = parseInt(hex.replace('#', ''), 16);
   return [srgbToLinear(((n >> 16) & 255) / 255), srgbToLinear(((n >> 8) & 255) / 255), srgbToLinear((n & 255) / 255)];
@@ -416,7 +421,7 @@ export class PaintEngine {
   }
 
   _shade(x0, y0, x1, y1, L) {
-    const { W, H, color, height, water, film, ground, scratchH, rgba } = this, P = this.params;
+    const { W, H, color, height, water, film, ground, scratchH, rgba, albedo, normals } = this, P = this.params;
     const { lx, ly, lz, hx, hy, hz, ambient, flat } = L;
 
     // combined surface height: dried film + wet layer. Thin paint keeps the weave, thick paint buries it
@@ -440,11 +445,17 @@ export class PaintEngine {
         // how dry the paint here is: wet paint is a little lighter and glossier, dried paint sits darker and satin
         const p = film[i] + height[i] + water[i], tw = height[i] + water[i];
         const dry = tw > 1e-5 ? Math.min(1, Math.max(0, 1 - water[i] / tw / F_FRESH)) : 1;
-        lit *= 1 - P.dryDarken * dry * Math.min(1, p * 8);
+        const darken = 1 - P.dryDarken * dry * Math.min(1, p * 8);
+        lit *= darken;
 
         const spec = Math.pow(Math.max(0, nx * hx + ny * hy + nz * hz), 36) * P.gloss * (0.25 + Math.min(1, p * 3)) * (1.5 - 0.5 * dry);
         const o = i * 4, c = i * 3;
-        let R = linearToSrgb(Math.min(1, color[c] * lit + spec)) * 255, G = linearToSrgb(Math.min(1, color[c + 1] * lit + spec)) * 255, B = linearToSrgb(Math.min(1, color[c + 2] * lit + spec)) * 255;
+        if (albedo) {
+          albedo[o] = toSrgb8(color[c] * darken); albedo[o + 1] = toSrgb8(color[c + 1] * darken); albedo[o + 2] = toSrgb8(color[c + 2] * darken); albedo[o + 3] = 255;
+          // tangent space is y-up and the canvas is y-down, so the y slope flips sign
+          normals[o] = (-gx / nn * 0.5 + 0.5) * 255; normals[o + 1] = (gy / nn * 0.5 + 0.5) * 255; normals[o + 2] = (nz * 0.5 + 0.5) * 255; normals[o + 3] = 255;
+        }
+        let R = toSrgb8(Math.min(1, color[c] * lit + spec)), G = toSrgb8(Math.min(1, color[c + 1] * lit + spec)), B = toSrgb8(Math.min(1, color[c + 2] * lit + spec));
         if (this.debugWet && tw > 1e-5) {
           const wk = smooth01((water[i] / tw - F_LOCK) / (F_OPEN - F_LOCK));
           const a = wk >= 0.999 ? 0.55 : 0.6 * Math.min(1, wk * 4 + 0.15), r2 = wk >= 0.999 ? 40 : 255, g2 = wk >= 0.999 ? 110 : 140, b2 = wk >= 0.999 ? 255 : 0;
@@ -453,6 +464,15 @@ export class PaintEngine {
         rgba[o] = R; rgba[o + 1] = G; rgba[o + 2] = B; rgba[o + 3] = 255;
       }
     }
+  }
+
+  // Extra outputs for a 3D surface: an unlit colour map and a tangent-space normal map (both RGBA8, same size as the
+  // canvas), refreshed by render() wherever it re-shades. The 3D easel uses these so the room's own lights shade the paint.
+  enableMaps() {
+    const n = this.W * this.H;
+    this.albedo = new Uint8ClampedArray(n * 4);
+    this.normals = new Uint8ClampedArray(n * 4);
+    this.tileDirty.fill(2); this.anyDirty = true;
   }
 
   setDebugWet(on) { this.debugWet = !!on; this.tileDirty.fill(2); this.anyDirty = true; }

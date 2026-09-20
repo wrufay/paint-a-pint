@@ -52,8 +52,14 @@ composer.addPass(new OutputPass());
 const world = buildRoom(scene);
 const painter = new AcrylicPainter(document.getElementById('paint-canvas'), document.getElementById('grain'));
 // the easel shows the live painting canvas, so paint keeps drying (and showing it) while you look around the room
-const paintTex = new THREE.CanvasTexture(painter.canvas); paintTex.colorSpace = THREE.SRGBColorSpace; paintTex.anisotropy = 8;
+// (unlit colour + a normal map from the paint's height, so ridges catch the room's light)
+const paintTex = new THREE.CanvasTexture(painter.albedoCanvas); paintTex.colorSpace = THREE.SRGBColorSpace; paintTex.anisotropy = 8;
+const paintNormal = new THREE.CanvasTexture(painter.normalCanvas); paintNormal.anisotropy = 8;
 world.canvasMat.map = paintTex;
+world.canvasMat.normalMap = paintNormal;
+world.canvasMat.normalScale.set(1, 1);
+world.canvasMat.roughness = 0.8;
+const uploadPaint = () => { if (painter.syncMaps()) { paintTex.needsUpdate = true; paintNormal.needsUpdate = true; } };
 
 // ── state machine: room → travelling → paint → travelling → room ─────────────
 let mode = 'room';
@@ -137,13 +143,14 @@ function enterPaint() {
   });
 }
 
-function leavePaint() {
+// hang = true finishes the painting (it goes on the wall and the easel is cleared); false just steps back and leaves it drying on the easel
+function leavePaint(hang = true) {
   if (mode !== 'paint') return;
   mode = 'travelling';
   painter.up();
   paintEl.classList.remove('on');
   document.getElementById('cursor').style.opacity = 0;
-  const hung = painter.dirty ? painter.composite() : null;
+  const hung = hang && painter.dirty ? painter.composite() : null;
   document.body.classList.remove('painting');
   travel(homePose(), () => {
     mode = 'room';
@@ -152,13 +159,13 @@ function leavePaint() {
       const slot = world.hang(hung);
       slot.popT = performance.now();
       painter.clear();
-      paintTex.needsUpdate = true;
+      uploadPaint();
     }
   });
 }
 
-initAcrylicUI(painter, { onBack: leavePaint });
-addEventListener('keydown', (e) => { if (e.key === 'Escape') leavePaint(); });
+initAcrylicUI(painter, { onBack: () => leavePaint(true) });
+addEventListener('keydown', (e) => { if (e.key === 'Escape') leavePaint(false); });
 
 // ── picking ──────────────────────────────────────────────────────────────────
 const ray = new THREE.Raycaster();
@@ -208,7 +215,7 @@ function frame(now) {
 
   painter.tick(now);
   // the 3D easel only needs the new pixels when it can be seen (the paint overlay hides it), and not every frame
-  if (mode !== 'paint' && painter.changed && now - texT > 100) { paintTex.needsUpdate = true; painter.changed = false; texT = now; }
+  if (mode !== 'paint' && painter.changed && now - texT > 100) { uploadPaint(); painter.changed = false; texT = now; }
 
   for (const f of world.frames) { // little pop when a painting lands on the wall
     if (f.popT < 0) continue;
