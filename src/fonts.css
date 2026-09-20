@@ -1,11 +1,11 @@
 /*
  * Self-hosted fonts (Fontsource, bundled by Vite). See docs/design/DESIGN.md.
- * Only families the UI actually draws are loaded. Add Young Serif (400) for the
- * display wordmark and Nunito (700) for tape labels when they first appear:
- *   npm install @fontsource/young-serif @fontsource/nunito
- *   @import "@fontsource/young-serif/400.css";
+ * Only families the UI actually draws are loaded. Add Nunito (700) for tape labels
+ * when they first appear:
+ *   npm install @fontsource/nunito
  *   @import "@fontsource/nunito/700.css";
  */
 @import "@fontsource/dm-sans/400.css";
 @import "@fontsource/dm-sans/500.css";
 @import "@fontsource/dm-sans/700.css";
+@import "@fontsource/young-serif/400.css";   /* display: the how-to modal heading */
