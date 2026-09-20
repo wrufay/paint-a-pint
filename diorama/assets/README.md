@@ -1,0 +1,2 @@
+- general reference photos for the paint palette, tubes, water cups, brushes and canvas.
+- titles of the photo should try to describe what the picture should be used to reference.

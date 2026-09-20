@@ -1,0 +1,1 @@
+- these are not particular WIP's in any order, a couple of them are iterations of the same painting. they are all high quality and you should be able to see some texture in all of them for reference

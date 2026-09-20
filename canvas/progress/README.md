@@ -1,0 +1,3 @@
+- basically time is not spread out evenly, they do not all have the same lighting, and this painting in total took around 10 hours. it was on a Muji sketchbook - so thin, smooth paper 
+- size: W16.2 x L22.5 cm (W6.3 x L8.8")
+- we should maybe include the tape in the app as well?
