@@ -165,7 +165,7 @@ export function buildRoom(scene) {
   box(room, 0.13, wy1 - wy0, 0.26, M.white, wx0, yc, fz, { r: 0.02 });
   box(room, 0.13, wy1 - wy0, 0.26, M.white, wx1, yc, fz, { r: 0.02 });
   box(room, 0.1, wy1 - wy0, 0.24, M.white, xc, yc, fz, { r: 0.015 });
-  box(room, wx1 - wx0 + 0.5, 0.1, 0.55, M.white, xc, wy0 + 0.02, -3.72, { r: 0.03 });
+  // (the window sill that stood here was removed: it took up a lot of the bird's-eye view and looked wrong in the zoom)
 
   // sized to fill the window from the camera's angle and no wider, or it pokes out past the open side of the diorama
   const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(3.55, 3.0), new THREE.MeshBasicMaterial({ map: backdropTexture(), toneMapped: false }));
@@ -238,18 +238,20 @@ export function buildRoom(scene) {
     oldPalette.push(sph(room, 0.045, std(c, { roughness: 0.5 }), 0.95 + Math.cos(a) * 0.19, TOP + 0.05, -2.85 - Math.sin(a) * 0.12, [1, 0.5, 1], { cast: false }));
   });
 
-  // pen cup with pastel pens, a pink beaded flower and a yellow plush
-  cyl(room, 0.17, 0.15, 0.4, std(0xf3ead8), 1.45, TOP + 0.2, -3.45);
+  // pen cup with pastel pens, a pink beaded flower and a yellow plush. They stand in their own group, moved left of the books so the
+  // back-right of the desk is free for the water jars and brushes (see TABLE in props.js).
+  const pens = new THREE.Group(); pens.position.set(-3.4, 0, 0.25); room.add(pens);
+  cyl(pens, 0.17, 0.15, 0.4, std(0xf3ead8), 1.45, TOP + 0.2, -3.45);
   ['#f6a5b8', '#a8d8c4', '#f8d98a', '#a9c4f0', '#d6b8f0', '#f7b68f', '#9fd9d0', '#f2a0a0'].forEach((c, i) => {
-    const p = cyl(room, 0.014, 0.014, 0.62, std(0xf0f0f0), 1.45 + (i - 3.5) * 0.028, TOP + 0.6, -3.45 + ((i * 7) % 3 - 1) * 0.04, { seg: 6 });
+    const p = cyl(pens, 0.014, 0.014, 0.62, std(0xf0f0f0), 1.45 + (i - 3.5) * 0.028, TOP + 0.6, -3.45 + ((i * 7) % 3 - 1) * 0.04, { seg: 6 });
     p.rotation.set(((i * 5) % 3 - 1) * 0.1, 0, (i - 3.5) * 0.09);
     const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.22, 6), std(c));
     tip.position.set(0, 0.2, 0); p.add(tip);
   });
-  cyl(room, 0.008, 0.008, 0.5, std(0x5b8a4a), 1.7, TOP + 0.75, -3.4, { seg: 5 });
-  for (let i = 0; i < 6; i++) sph(room, 0.045, std(0xf07a9a), 1.7 + Math.cos(i * 1.05) * 0.06, TOP + 1.0 + Math.sin(i * 1.05) * 0.06, -3.4, [1, 1, 1], { cast: false });
-  sph(room, 0.2, std(0xf6d54a, { roughness: 0.95 }), 1.95, TOP + 0.2, -3.45);
-  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.07, 6), std(0xf0902a)); beak.position.set(2.02, TOP + 0.2, -3.27); beak.rotation.x = Math.PI / 2; room.add(beak);
+  cyl(pens, 0.008, 0.008, 0.5, std(0x5b8a4a), 1.7, TOP + 0.75, -3.4, { seg: 5 });
+  for (let i = 0; i < 6; i++) sph(pens, 0.045, std(0xf07a9a), 1.7 + Math.cos(i * 1.05) * 0.06, TOP + 1.0 + Math.sin(i * 1.05) * 0.06, -3.4, [1, 1, 1], { cast: false });
+  sph(pens, 0.2, std(0xf6d54a, { roughness: 0.95 }), 1.95, TOP + 0.2, -3.45);
+  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.07, 6), std(0xf0902a)); beak.position.set(2.02, TOP + 0.2, -3.27); beak.rotation.x = Math.PI / 2; pens.add(beak);
 
   // mint crate with sticky notes and stationery
   box(room, 0.95, 0.42, 0.6, M.mint, 2.55, TOP + 0.21, -3.4, { r: 0.04 });
@@ -264,9 +266,7 @@ export function buildRoom(scene) {
   cyl(room, 0.025, 0.035, 0.12, M.white, 3.4, TOP + 0.17, -2.6); cyl(room, 0.03, 0.03, 0.03, std(0xd9483b), 3.4, TOP + 0.25, -2.6);
   box(room, 0.2, 0.05, 0.2, M.ink, 2.7, TOP + 0.03, -2.6, { r: 0.03, ry: 0.4 });
   box(room, 0.32, 0.03, 0.09, std(0x2f4a80), 2.7, TOP + 0.03, -2.6, { r: 0.015, ry: 0.4 });
-  // windowsill: a small yellow plush and a couple of figurines
-  sph(room, 0.16, std(0xf6d54a, { roughness: 0.95 }), 3.35, wy0 + 0.23, -3.72);
-  sph(room, 0.07, std(0xf4a0c0), 2.2, wy0 + 0.13, -3.72); sph(room, 0.07, std(0xa8d8c4), 2.5, wy0 + 0.13, -3.72);
+  // (the plush and figurines that stood on the window sill went with it)
 
   // ── wall collage: painting slots among photobooth strips and prints ─────────
   // 8 painting slots (they fill with saved paintings); strips/polaroids are abstract colour blocks, not real faces.

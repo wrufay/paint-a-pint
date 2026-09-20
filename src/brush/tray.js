@@ -18,11 +18,27 @@ export class Tray {
   constructor() {
     this.engine = new PaintEngine({ width: TRAY_W, height: TRAY_H, seed: 21 });
     const e = this.engine;
-    e.gesso = [srgbToLinear(0.95), srgbToLinear(0.95), srgbToLinear(0.92)];   // white styrofoam, not warm gesso
-    e.setParams({ weave: 0.025, relief: 3, wetSeconds: 300, gloss: 0.3, hueJitter: 0, bristleTint: 0 });   // a tray keeps paint workable for minutes
-    e.clear();
+    e.gesso = [srgbToLinear(0.83), srgbToLinear(0.68), srgbToLinear(0.47)];   // light birch, the colour of a wooden palette
+    e.setParams({ weave: 0, relief: 3, wetSeconds: 300, gloss: 0.3, hueJitter: 0, bristleTint: 0 });   // a palette keeps paint workable for minutes
+    this._wood();
     this.slot = 0;
     this.mixing = false; this.squeezing = false;
+  }
+
+  // Bare wood: the engine's blank surface plus long, slightly wavy grain lines and a few darker streaks.
+  _wood() {
+    const e = this.engine, { W, H, color } = e;
+    e.clear();
+    for (let y = 0; y < H; y++) {
+      const wave = Math.sin(y * 0.09) * 2.2 + Math.sin(y * 0.021 + 1.3) * 5;
+      for (let x = 0; x < W; x++) {
+        const g = Math.sin((y + Math.sin(x * 0.011 + wave * 0.2) * 3) * 0.55 + Math.sin(x * 0.004) * 4) * 0.5 + 0.5;   // long streaks along x
+        const streak = Math.sin(y * 0.16 + Math.sin(x * 0.006 + y * 0.03) * 2.6) > 0.82 ? -0.05 : 0;
+        const k = 1 + (g - 0.5) * 0.07 + streak, i = (y * W + x) * 3;
+        color[i] *= k; color[i + 1] *= k; color[i + 2] *= k;
+      }
+    }
+    e.tileDirty.fill(2); e.anyDirty = true;
   }
 
   // Squeeze `paint` (an entry from paints.js) out at (x, y), or at the next free spot if no position is given. Dragging on after
@@ -77,7 +93,7 @@ export class Tray {
     this.engine.endStroke(); Object.assign(this.engine.params, this._mixKeep); this.mixing = false;
   }
 
-  clear() { this.engine.snapshot(); this.engine.clear(); this.slot = 0; }
+  clear() { this.engine.snapshot(); this._wood(); this.slot = 0; }
   undo() { return this.engine.restore(); }
   tick(seconds) { this.engine.setTime(seconds); return this.engine.render(); }
   get paint() { return MIXED; }
