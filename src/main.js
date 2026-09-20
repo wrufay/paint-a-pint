@@ -6,6 +6,7 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { buildRoom } from './room.js';
 import { AcrylicPainter, initAcrylicUI } from './acrylic-painter.js';
+import { addPaintProps } from './props.js';
 
 const BG = 0x1c1915;
 const app = document.getElementById('app');
@@ -53,6 +54,9 @@ composer.addPass(new OutputPass());
 
 // ── world ────────────────────────────────────────────────────────────────────
 const world = buildRoom(scene);
+// the paint tubes and brushes on the desk; their labels are drawn on a canvas in DM Sans, so wait for the font first
+Promise.all([document.fonts.load('500 20px "DM Sans"'), document.fonts.load('700 20px "DM Sans"')]).catch(() => {})
+  .then(() => { world.props = addPaintProps(world.room); poke(6); shadowWake = 6; });
 if (coarse) world.sun.shadow.mapSize.set(2048, 2048);
 const painter = new AcrylicPainter(document.getElementById('paint-canvas'), document.getElementById('grain'));
 // the easel shows the live painting canvas, so paint keeps drying (and showing it) while you look around the room
