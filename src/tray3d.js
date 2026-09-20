@@ -7,7 +7,7 @@ import { Tray, TRAY_W, TRAY_H } from './brush/tray.js';
 import { TABLE } from './props.js';
 
 const DESK_TOP = 1.5;
-const W = 0.52, H = W * (TRAY_H / TRAY_W);            // the palette's bounding box, in room units (same aspect as the engine's canvas)
+const W = 0.48, H = W * (TRAY_H / TRAY_W);            // the palette's bounding box, in room units (same aspect as the engine's canvas)
 const THICK = 0.018;                                   // board thickness
 
 // The outline: an ellipse with a smooth concave dent at the front right, and a thumb hole beside it. Coordinates are in room

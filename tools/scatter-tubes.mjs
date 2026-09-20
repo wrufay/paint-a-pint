@@ -5,7 +5,7 @@
 const seed0 = +process.argv[2] || 7;
 function rng(a) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
-const LEN = 0.35, WID = 0.105;                        // a tube's footprint, with a little air
+const LEN = 0.34, WID = 0.1;                        // a tube's footprint, with a little air
 const rect = (cx, cz, a, l = LEN, w = WID) => {       // corners of an oriented rectangle
   const dx = -Math.sin(a), dz = -Math.cos(a), px = Math.cos(a), pz = -Math.sin(a);   // along the tube, and across it (perpendicular)
   const c = [];
@@ -19,21 +19,22 @@ const box = (x0, x1, z0, z1) => [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
 
 const keepOut = [
   box(-0.16, 1.18, -3.86, -2.86),      // the canvas and its frame
-  box(-0.73, -0.13, -2.97, -2.46),     // the palette
+  box(1.2, 1.76, -3.1, -2.6),          // the palette, on the right where the sun falls
   box(1.15, 1.8, -3.95, -3.5),         // the water jar and glass, top right
-  box(1.2, 1.8, -3.5, -2.4),           // the card's default place, bottom right (it starts at x = 1.25)
+  box(-0.73, -0.22, -3.46, -2.4),      // the card's default place, bottom left
   box(-1.2, -0.7, -3.8, -3.5),         // the pink book
 ];
-const inView = (c) => c.every(([x, z]) => x > -0.71 && x < 1.75 && z > -3.6 && z < -2.46);
+const inView = (c) => c.every(([x, z]) => x > -0.71 && x < 1.75 && z > -3.84 && z < -2.46);
 
 // the nine paints in card order: 0 white, 1 lemon, 2 azo, 3 naples, 4 naphthol red, 5 magenta, 6 sienna, 7 king's blue, 8 prussian.
 // The two primary triads are kept together: warm (azo, naphthol red, king's blue) on the left, cool (lemon, magenta, prussian) below the canvas.
 const groups = [
-  { ids: [2, 4, 7, 0], x: [-0.52, -0.3], z: [-3.42, -3.12], a: [-1.2, 1.2] },       // left: the warm primaries and white
-  { ids: [1, 5, 8, 6, 3], x: [0.02, 1.16], z: [-2.74, -2.6], a: [0.55, 1.05] },    // under the canvas: the cool primaries, sienna and naples, zig-zagging
+  { ids: [2, 4, 7], x: [-0.53, -0.37], z: [-3.76, -3.56], a: [1.05, 1.5] },        // top left, above the card: the warm primaries, lying almost sideways
+  { ids: [1, 5, 8, 6], x: [0.05, 1.0], z: [-2.74, -2.6], a: [0.55, 1.05] },         // under the canvas: the cool primaries and sienna, zig-zagging
+  { ids: [0, 3], x: [1.3, 1.55], z: [-3.42, -3.3], a: [1.2, 1.55] },                // white and naples, between the cups and the palette
 ];
 
-for (let seed = seed0; seed < seed0 + 4000; seed++) {
+for (let seed = seed0; seed < seed0 + 40000; seed++) {
   const r = rng(seed), out = Array(9).fill(null), placed = [], lean = r() < 0.5 ? -1 : 1;
   let ok = true;
   for (const g of groups) {

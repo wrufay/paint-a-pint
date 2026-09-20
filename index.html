@@ -43,7 +43,7 @@
     #grain { mix-blend-mode: multiply; pointer-events: none; opacity: .9; }
 
     #card {
-      position: absolute; right: 26px; bottom: 18px; width: 236px; padding: 22px 18px 16px;   /* low on the right; it can be dragged (acrylic-painter.js) */
+      position: absolute; left: 26px; bottom: 18px; width: 236px; padding: 22px 18px 16px;   /* low on the left (the sun falls on the right); it can be dragged (acrylic-painter.js) */
       border: 5px dashed var(--pink); background: var(--cream);
     }
     #card h2 { margin: 0 0 12px; color: var(--ultramarine); font-size: var(--text-lg); letter-spacing: .08em; }
@@ -77,7 +77,7 @@
     }
 
     @media (max-aspect-ratio: 5/4) {
-      #card { right: 50%; transform: translateX(50%); top: auto; bottom: 14px; width: min(92vw, 420px); padding-top: 18px; }
+      #card { left: auto; right: 50%; transform: translateX(50%); top: auto; bottom: 14px; width: min(92vw, 420px); padding-top: 18px; }
       #swatches { grid-template-columns: repeat(6, 1fr); }
     }
   </style>
