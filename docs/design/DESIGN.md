@@ -2,7 +2,7 @@
 
 One place for colour, type and technical UI rules. If code disagrees with this file, one of them is wrong: fix it or update this file in the same change.
 
-- Tokens: `src/tokens.css` (not imported by any page yet, see "Adopting the tokens").
+- Tokens: `src/tokens.css`, linked by `index.html` and `lab.html`. Fonts: `src/fonts.css`, linked by `index.html`.
 - Font comparison page: `docs/design/font-specimen.html`.
 - Colour: `docs/design/colour-specimen-original.html` is the chosen 14-token palette. `docs/design/colour-specimen.html` holds the alternatives explored (see "Alternatives explored").
 
@@ -49,7 +49,7 @@ Do this for every family and weight a texture uses, and check that the tube labe
 
 ### Loading fonts
 
-Currently the specimen loads from Google Fonts. For the app, self-host (Fontsource via npm, bundled by Vite) so it works offline and on iPad. That means a `package.json` change, so do it as its own commit and check no other session has uncommitted edits to `package.json` first. Do not rely on `/System/Library/Fonts`: it is macOS-only.
+The app self-hosts fonts through Fontsource, bundled by Vite, so it works offline and on iPad. `src/fonts.css` is linked from `index.html` and currently loads **DM Sans 400, 500 and 700** only, because that is all the UI draws. Add **Young Serif** (400) for the display wordmark and **Nunito** (700) for tape labels the first time something uses them: `npm install @fontsource/young-serif @fontsource/nunito`, then `@import` them in `fonts.css`. That is a `package.json` change, so do it as its own commit and check no other session has uncommitted edits to `package.json` first. The font specimen pages still load from Google Fonts. Do not rely on `/System/Library/Fonts`: it is macOS-only. `lab.html` keeps system mono and does not load fonts.
 
 ## Colour (decided)
 
@@ -102,9 +102,11 @@ Text on a filled colour:
 
 Practical rule: **on light surfaces pink, green and sky are never text or button labels.** Put the label on cream next to the colour, or use terracotta or ultramarine.
 
-### Known mismatch with the code today
+### Contrast fixes applied when the tokens were adopted
 
-`index.html` sets the primary button as white on `--green` (2.81:1) and the card heading in `--green` on cream (2.63:1); both fail the rule above. When the tokens are adopted, make the primary button terracotta with cream text and set the card heading in `--ink` or `--ultramarine`.
+`index.html` used to set the primary button as white on `--green` (2.81:1) and the card heading in `--green` on cream (2.63:1). Both failed the rule above. The primary button is now cream on `--terracotta` (5.94:1) and the card heading is `--ultramarine` (7.06:1).
+
+Watch item: the paint card now shows four accents at once (pink dashed border, green selection ring and slider, terracotta button, ultramarine heading). If that reads as busy, set the heading in `--ink` instead; that is a one-word change and stays within the rules.
 
 ### Alternatives explored (not adopted)
 
@@ -114,9 +116,16 @@ Kept in `docs/design/colour-specimen.html` for reference:
 - A deeper night indigo (`#232340` page, `#30305a` card). Raw `--dusk` is too light to carry pink, green or sky text; if that is ever needed at night, this is the fix.
 - Per-room accents (alps, Waterloo, home) are still an open question: nothing in the palette prevents it.
 
-## Adopting the tokens
+## Adopting the tokens (done for the two pages)
 
-`index.html` and `lab.html` each define their own `:root` tokens inline. `src/tokens.css` reuses the same names (`--cream`, `--pink`, `--green`, `--ink`, `--mono`), so switching is: import `tokens.css`, delete the inline `:root` block, then swap hard-coded fonts and colours for tokens and apply the fix in "Known mismatch". Do this in one focused commit, since those two files are shared with other sessions.
+`index.html` and `lab.html` link `src/tokens.css` and no longer define their own `:root` tokens. Palette hexes in their CSS are now tokens (backdrop, paper, tape, butter hover, muted-on-dark).
+
+Still hard-coded, deliberately or not yet:
+- `src/paint.js` exports `PAPER = '#f6efdd'`. It matches `--paper` today; keep them in sync, or read the value from the CSS variable if the two ever need to diverge.
+- Neutral utilities in the pages: white button fills (`#fff`), shadow and cursor `rgba(...)` values, and the cream-with-alpha hint pill.
+- Scene colours in `room.js`, which are art, not UI.
+
+New UI CSS should use the tokens; do not add new palette hexes to the pages.
 
 ## Working agreement
 
