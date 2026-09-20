@@ -8,7 +8,8 @@
 //   • Drying: the water in the wet layer evaporates on a clock (thick paint far slower than thin, a skin slowing
 //     the last of it). As it goes the paint stiffens: open (blends, gets picked up) -> tacky (drags, breaks up under
 //     a brush) -> locked, when the wet layer freezes into film. Later paint covers film instead of mixing with it.
-//   • Wet-on-wet: a bristle dragged through open paint picks it up and mixes.
+//   • Wet-on-wet: a bristle dragged through open paint picks it up and mixes, and shoves some of it
+//     aside, leaving a groove where it went and a ridge beside it (locked paint doesn't move).
 //   • Colour mixes as pigment (Kubelka-Munk over a 38-band spectrum), so blue + yellow leans green and white tints.
 //   • Everything is lit from paint height (normal map + a touch of gloss), so thick paint reads as thick.
 
@@ -30,6 +31,7 @@ export const DEFAULTS = {
   tack: 0.5,           // how much half-dry paint drags and breaks up under the brush
   dryDarken: 0.08,     // acrylic dries a touch darker
   timeScale: 1,        // simulated seconds per real second (time warp)
+  push: 0.4,           // how much open paint the bristles shove aside into ridges (0 = none)
   heightGain: 0.055,   // paint thickness laid per sample
   relief: 5.0,         // how strongly thickness shows in the lighting
   weave: 0.10,         // canvas texture strength
@@ -49,6 +51,7 @@ const F_OPEN = 0.3, F_LOCK = 0.12, F_FRESH = 0.4;
 const DAB = 0.08;                                               // thickness of one typical stroke (measured)
 // water one DAB must lose to go from fresh to F_OPEN, per unit of wetSeconds
 const E0 = DAB * (1 - F_FRESH) * (F_FRESH / (1 - F_FRESH) - F_OPEN / (1 - F_OPEN));
+const PUSH_MAX = 65536, pushIdx = new Int32Array(PUSH_MAX), pushS = new Float32Array(PUSH_MAX), pushW = new Float32Array(PUSH_MAX);
 const TILE = 32;                                                // drying and shading work on tiles, only where paint is wet
 const smooth01 = (t) => { t = t < 0 ? 0 : t > 1 ? 1 : t; return t * t * (3 - 2 * t); };
 
@@ -195,7 +198,7 @@ export class PaintEngine {
       axis: [Math.cos(2 * (P.fixedAngle * Math.PI / 180)), Math.sin(2 * (P.fixedAngle * Math.PI / 180))], // doubled-angle state
       started: false,
     };
-    this._deposit(x, y, pressure, this.stroke.axis);
+    this._deposit(x, y, pressure, this.stroke.axis, 0, 0);
   }
 
   strokeTo(x, y, pressure) {
@@ -218,20 +221,24 @@ export class PaintEngine {
     const steps = Math.max(1, Math.ceil(dist)); // one deposit per pixel of travel
     for (let i = 1; i <= steps; i++) {
       const f = i / steps;
-      this._deposit(s.px + dx * f, s.py + dy * f, s.pressure + (pressure - s.pressure) * f, s.axis);
+      this._deposit(s.px + dx * f, s.py + dy * f, s.pressure + (pressure - s.pressure) * f, s.axis, dx / dist, dy / dist);
     }
     s.px = tx; s.py = ty; s.sx = x; s.sy = y; s.pressure = pressure; s.moved += dist;
   }
 
   endStroke() { this.stroke = null; }
 
-  _deposit(cx, cy, pressure, axis) {
+  // (ux, uy) is the unit direction of travel; (0, 0) means no travel yet, so nothing is pushed.
+  _deposit(cx, cy, pressure, axis, ux, uy) {
     const { W, H, color, height, water, film, ground } = this, P = this.params, s = this.stroke;
     const wm = P.waterMix, transp = Math.pow(Math.min(1, (1 - wm) / (1 - F_FRESH)), 0.8); // thinned paint is see-through
     const a = Math.atan2(axis[1], axis[0]) / 2, ca = Math.cos(a), sa = Math.sin(a);
     const press = Math.min(1, Math.max(0.05, pressure));
     const spread = 0.55 + 0.6 * press;               // harder press splays the row wider
     const tmp = [0, 0, 0];
+    const sx = -uy, sy = ux;                          // across the direction of travel: paint is shoved this way
+    const pushing = P.push > 0 && (ux !== 0 || uy !== 0);
+    let np = 0;                                       // queued shoves, applied after every bristle has been through
     let x0 = W, y0 = H, x1 = 0, y1 = 0;
 
     for (const b of s.bristles) {
@@ -253,7 +260,7 @@ export class PaintEngine {
           const i = yy * W + xx, fall = 1 - d2 / (r * r);
 
           // how workable the wet paint already here is: 1 open (blends), 0 locked or bare canvas
-          const s0 = height[i], w0 = water[i], tw = s0 + w0;
+          let s0 = height[i], w0 = water[i], tw = s0 + w0;
           const wk = tw > 1e-5 ? smooth01((w0 / tw - F_LOCK) / (F_OPEN - F_LOCK)) : 0;
           const tacky = 4 * wk * (1 - wk);   // peaks halfway between open and locked
 
@@ -262,6 +269,24 @@ export class PaintEngine {
           const reach = contact - dryT * (1 - ground[i]) * 1.3 - dryT * 0.15 - tacky * P.tack * (0.25 + 0.75 * (1 - ground[i]));
           if (reach <= 0) continue;
           const amt = Math.min(1, reach * 1.4) * fall;
+
+          // shove: open paint under the bristle is pushed sideways to just outside it (a groove here, a ridge there)
+          if (pushing && wk > 0.05 && tw > 1e-4 && np < PUSH_MAX) {
+            const across = (xx - bx) * sx + (yy - by) * sy;
+            const f = Math.min(0.5, P.push * wk * contact * fall);
+            const d = (across >= 0 ? 1 : -1) * (r + 0.9);
+            const fx = bx + sx * d, fy = by + sy * d, tx = Math.floor(fx), ty = Math.floor(fy), ax = fx - tx, ay = fy - ty;
+            if (tx >= 0 && tx < W - 1 && ty >= 0 && ty < H - 1 && f > 0.002 && np + 4 <= PUSH_MAX) {
+              // land it across the four pixels around the target, so ridges are smooth and not one rounded pixel
+              const j = ty * W + tx, ms = s0 * f, mw = w0 * f;
+              const w00 = (1 - ax) * (1 - ay), w10 = ax * (1 - ay), w01 = (1 - ax) * ay, w11 = ax * ay;
+              pushIdx[np] = j; pushS[np] = ms * w00; pushW[np] = mw * w00; np++;
+              pushIdx[np] = j + 1; pushS[np] = ms * w10; pushW[np] = mw * w10; np++;
+              pushIdx[np] = j + W; pushS[np] = ms * w01; pushW[np] = mw * w01; np++;
+              pushIdx[np] = j + W + 1; pushS[np] = ms * w11; pushW[np] = mw * w11; np++;
+              s0 -= s0 * f; w0 -= w0 * f; tw = s0 + w0;
+            }
+          }
 
           const c = i * 3;
           // bristle drags open paint from the canvas into its own colour
@@ -295,7 +320,13 @@ export class PaintEngine {
         }
       }
     }
-    if (x1 >= x0) { this._markActive(x0, y0, x1 + 1, y1 + 1); this._markDirty(x0 - 2, y0 - 2, x1 + 3, y1 + 3); }
+    for (let k = 0; k < np; k++) {
+      const j = pushIdx[k], room = Math.max(0, 1.6 - film[j] - height[j] - water[j]), m = pushS[k] + pushW[k];
+      const keep = m > room ? room / m : 1;
+      height[j] += pushS[k] * keep; water[j] += pushW[k] * keep;
+    }
+    const pad = pushing ? 8 : 2;   // shoved paint lands a few pixels outside the bristles
+    if (x1 >= x0) { this._markActive(x0 - pad, y0 - pad, x1 + 1 + pad, y1 + 1 + pad); this._markDirty(x0 - pad, y0 - pad, x1 + 1 + pad, y1 + 1 + pad); }
   }
 
   _tiles(x0, y0, x1, y1, fn) {

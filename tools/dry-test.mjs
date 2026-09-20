@@ -69,7 +69,26 @@ console.log('\n— 4. dries darker —');
   console.log(`wet rgb(${wet})  dry rgb(${[...eng.rgba.slice(i, i + 3)]})`);
 }
 
-console.log('\n— 5. cost —');
+console.log('\n— 5. ridges: a stroke through wet paint —');
+{
+  const volume = (e) => { let v = 0; for (let i = 0; i < e.height.length; i++) v += e.height[i] + e.water[i]; return v; };
+  for (const push of [0, 0.25, 0.6]) {
+    const eng = new PaintEngine({ width: 300, height: 200, seed: 5 });
+    eng.setParams({ push });
+    stroke(eng, col('lemon yellow'), line(30, 100, 270, 100));
+    stroke(eng, col('lemon yellow'), line(30, 96, 270, 96));       // build a wet slab
+    const before = volume(eng);
+    stroke(eng, col("king's blue"), line(150, 30, 150, 170));      // cross it, downward
+    // thickness across the crossing stroke, at y = 60 (through the fresh stroke only) and y = 100 (through the slab)
+    const prof = (y) => Array.from({ length: 41 }, (_, k) => { const i = y * 300 + 130 + k; return eng.film[i] + eng.height[i] + eng.water[i]; });
+    const fmt = (a) => a.map((v) => Math.round(v * 100)).join(' ');
+    const slab = prof(100);
+    console.log(`push ${String(push).padEnd(4)} volume change ${((volume(eng) - before) / before * 100).toFixed(0)}%  slab profile x=130..170 (x100): ${fmt(slab)}`);
+    console.log(`          groove min ${Math.min(...slab.slice(8, 32)).toFixed(3)}  ridge max ${Math.max(...slab).toFixed(3)}`);
+  }
+}
+
+console.log('\n— 6. cost —');
 {
   const eng = new PaintEngine({ width: 1200, height: 900, seed: 3 });
   for (let k = 0; k < 40; k++) stroke(eng, col(k % 2 ? "king's blue" : 'lemon yellow'), line(40, 40 + k * 20, 1160, 60 + k * 20, 90));

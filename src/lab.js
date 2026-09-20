@@ -29,6 +29,7 @@ const SLIDERS = [
   ['tack', 'tack drag', 0, 1.5, 0.05],
   ['dryDarken', 'dry darkening', 0, 0.3, 0.01],
   ['timeScale', 'time warp', 1, 120, 1],
+  ['push', 'ridges', 0, 0.8, 0.02],
   ['heightGain', 'thickness', 0.01, 0.2, 0.005],
   ['relief', 'relief', 0, 14, 0.25],
   ['weave', 'canvas weave', 0, 0.4, 0.01],
