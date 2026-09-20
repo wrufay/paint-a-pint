@@ -28,15 +28,10 @@
   .head { display: flex; align-items: flex-end; justify-content: space-between; margin-top: 8px; }
   .word { font-family: var(--font-display); font-size: 168px; line-height: 1; color: var(--ink); letter-spacing: -.01em; }
   .say { font-size: 30px; color: var(--ink-soft); margin: 4px 0 0 6px; }
-  .glass { width: 170px; height: auto; flex: none; margin: 0 8px 4px 0; overflow: visible; }
+  .glass { width: 270px; height: 270px; object-fit: contain; flex: none; margin: -30px -20px -10px 12px; filter: drop-shadow(0 16px 18px rgba(74, 59, 52, .28)); }
 
-  ol { list-style: none; margin-top: 30px; display: grid; gap: 18px; }
-  li { display: grid; grid-template-columns: 44px 1fr; align-items: baseline; font-size: 29px; line-height: 1.4; }
-  li::before { content: counter(n) "."; counter-increment: n; font-family: var(--font-display); font-size: 30px; color: var(--ultramarine); }
-  ol { counter-reset: n; }
-  li small { display: block; font-size: 22px; color: var(--ink-soft); margin-top: 4px; }
-  .tag { display: inline-block; font-size: var(--text-sm); font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--ink-soft);
-         border: var(--border-btn); border-radius: var(--radius-pill); padding: 3px 12px 2px; margin-right: 8px; vertical-align: 4px; }
+  .def { margin-top: 30px; font-size: 29px; line-height: 1.4; }
+  .def small { display: block; font-size: 22px; color: var(--ink-soft); margin-top: 4px; }
 
   .rule { border: 0; border-top: 2px dashed var(--line); margin: 44px 0 36px; }
 
@@ -45,10 +40,7 @@
   .why b { font-family: var(--font-display); font-weight: 400; font-size: 44px; color: var(--terracotta); }
   .sub { font-size: 24px; line-height: 1.45; color: var(--ink-soft); margin-top: 20px; }
 
-  footer { display: flex; align-items: center; justify-content: space-between; margin-top: 42px; }
-  .dots { display: flex; gap: 10px; }
-  .dots i { width: 26px; height: 26px; border-radius: 50%; display: block; box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, .18); }
-  .brand { font-weight: 700; font-size: var(--text-sm); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--ink-soft); }
+  .fine { margin-top: 40px; font-size: 22px; line-height: 1.4; color: var(--ink-soft); }
 </style>
 </head>
 <body>
@@ -63,33 +55,10 @@
       <div class="say">/pīnt/</div>
     </div>
 
-    <!-- a pint glass, filled with the app's nine paints -->
-    <svg class="glass" viewBox="0 0 170 250" aria-hidden="true">
-      <defs>
-        <clipPath id="in"><path d="M28 30 H142 L126 214 Q125 224 115 224 H55 Q45 224 44 214 Z"/></clipPath>
-      </defs>
-      <ellipse cx="85" cy="238" rx="52" ry="7" fill="rgba(74,59,52,.16)"/>
-      <g clip-path="url(#in)">
-        <rect x="0" y="0" width="170" height="250" fill="#fff8e8"/>
-        <path d="M0 200 Q42 192 85 200 T170 200 V250 H0Z" fill="#111424"/>
-        <path d="M0 176 Q42 168 85 176 T170 176 V204 H0Z" fill="#622b22"/>
-        <path d="M0 152 Q42 144 85 152 T170 152 V180 H0Z" fill="#601529"/>
-        <path d="M0 128 Q42 120 85 128 T170 128 V156 H0Z" fill="#b5332e"/>
-        <path d="M0 106 Q42 98 85 106 T170 106 V132 H0Z" fill="#dfac46"/>
-        <path d="M0 84 Q42 76 85 84 T170 84 V110 H0Z" fill="#ead848"/>
-        <path d="M0 62 Q42 54 85 62 T170 62 V88 H0Z" fill="#3c79b4"/>
-        <path d="M0 44 Q42 34 85 44 T170 44 V66 H0Z" fill="#f3f3ef"/>
-        <circle cx="52" cy="36" r="9" fill="#f3f3ef"/><circle cx="82" cy="30" r="11" fill="#f3f3ef"/><circle cx="114" cy="35" r="9" fill="#f3f3ef"/><circle cx="132" cy="31" r="6" fill="#f3f3ef"/>
-        <rect x="40" y="40" width="9" height="170" rx="4.5" fill="#fff" opacity=".22" transform="rotate(4 44 125)"/>
-      </g>
-      <path d="M28 30 H142 L126 214 Q125 224 115 224 H55 Q45 224 44 214 Z" fill="none" stroke="#4a3b34" stroke-width="5" stroke-linejoin="round"/>
-    </svg>
+    <img class="glass" src="../assets/fabfav-master.png" alt="the paint-a-pint icon: a paint bucket with two brushes">
   </div>
 
-  <ol>
-    <li><span>a unit of measurement for liquid or dry volume that equals one-eighth of a gallon.<small>about half a litre.</small></span></li>
-    <li><span><span class="tag">informal</span>a glass of beer.</span></li>
-  </ol>
+  <p class="def">a unit of measurement for liquid or dry volume that equals one-eighth of a gallon.<small>about half a litre.</small></p>
 
   <hr class="rule">
 
@@ -97,10 +66,7 @@
   <p class="why">because you can paint a <b>lot</b>.<br>as much as you <b>want</b>.<br>even a <b>pint</b>.</p>
   <p class="sub">no tubes to buy, no brushes to wash. zero cost, zero cleanup.</p>
 
-  <footer>
-    <div class="dots"><i style="background:#f3f3ef"></i><i style="background:#ead848"></i><i style="background:#dfac46"></i><i style="background:#d5cebd"></i><i style="background:#b5332e"></i><i style="background:#601529"></i><i style="background:#622b22"></i><i style="background:#3c79b4"></i><i style="background:#111424"></i></div>
-    <div class="brand">paint-a-pint · a tiny painting room</div>
-  </footer>
+  <p class="fine">lets you paint as much as you want. even a pint.</p>
 </article>
 </body>
 </html>
