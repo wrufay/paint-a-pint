@@ -2,7 +2,9 @@
 //   node tools/render-test.mjs [out.png] [key=value ...]     e.g. node tools/render-test.mjs out.png size=60 dry=0.9
 import { writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
-import { PaintEngine, PALETTE, hexToLinear } from '../src/brush/engine.js';
+import { PaintEngine, hexToLinear } from '../src/brush/engine.js';
+import { mixPigment } from '../src/brush/pigment.js';
+import { paintByName } from '../src/brush/paints.js';
 
 const out = process.argv[2] || 'brush-test.png';
 const overrides = {};
@@ -11,28 +13,29 @@ for (const a of process.argv.slice(3)) { const [k, v] = a.split('='); overrides[
 const W = 900, H = 600;
 const eng = new PaintEngine({ width: W, height: H, seed: 11 });
 eng.setParams(overrides);
-const col = (name) => hexToLinear(PALETTE.find((p) => p.name === name).hex);
+const paint = (name) => paintByName(name);
 
 let t = 0;
-function stroke(color, pts, pressure = 0.7) {
+function stroke(p, pts, pressure = 0.7, color = hexToLinear(p.hex)) {
   eng.setTime(t); t += 4;
-  eng.beginStroke(pts[0][0], pts[0][1], pressure, color);
+  eng.beginStroke(pts[0][0], pts[0][1], pressure, color, p);
   for (const [x, y] of pts.slice(1)) eng.strokeTo(x, y, pressure);
   eng.endStroke();
 }
 const line = (x0, y0, x1, y1, n = 24) => Array.from({ length: n + 1 }, (_, i) => [x0 + ((x1 - x0) * i) / n, y0 + ((y1 - y0) * i) / n]);
 
 // 1) a row of swatch strokes (fresh load -> dry-out over a long drag)
-PALETTE.slice(0, 5).forEach((p, i) => stroke(hexToLinear(p.hex), line(40, 40 + i * 44, 860, 40 + i * 44 + 6, 60)));
+['titanium white', 'lemon yellow', 'azo yellow medium', 'naphthol red medium', 'permanent magenta'].forEach((n, i) => stroke(paint(n), line(40, 40 + i * 44, 860, 40 + i * 44 + 6, 60)));
 // 2) impressionist dabs: sky, then a wet-on-wet green from blue + yellow
-for (let i = 0; i < 9; i++) stroke(col(i % 2 ? 'cerulean' : 'ultramarine'), line(60 + i * 46, 300, 100 + i * 46, 268 + (i % 3) * 8, 8), 0.65);
-for (let i = 0; i < 6; i++) stroke(col('cadmium yellow'), line(120 + i * 30, 330, 150 + i * 30, 380, 8), 0.7);
-for (let i = 0; i < 6; i++) stroke(col('ultramarine'), line(135 + i * 30, 335, 120 + i * 30, 385, 8), 0.7);
+for (let i = 0; i < 9; i++) stroke(paint(i % 2 ? "king's blue" : 'prussian blue hue'), line(60 + i * 46, 300, 100 + i * 46, 268 + (i % 3) * 8, 8), 0.65);
+for (let i = 0; i < 6; i++) stroke(paint('lemon yellow'), line(120 + i * 30, 330, 150 + i * 30, 380, 8), 0.7);
+for (let i = 0; i < 6; i++) stroke(paint("king's blue"), line(135 + i * 30, 335, 120 + i * 30, 385, 8), 0.7);
 // 3) short warm dabs next to cool ones (broken colour)
-for (let i = 0; i < 14; i++) stroke(col(i % 2 ? 'cadmium red' : 'yellow ochre'), line(500 + (i % 7) * 44, 330 + Math.floor(i / 7) * 40, 530 + (i % 7) * 44, 350 + Math.floor(i / 7) * 40, 5), 0.75);
-// 4) a curved stroke with a light touch, then heavy
-stroke(col('viridian'), Array.from({ length: 40 }, (_, i) => [80 + i * 8, 480 + Math.sin(i / 5) * 30]), 0.4);
-stroke(col('titanium white'), Array.from({ length: 40 }, (_, i) => [420 + i * 10, 490 + Math.sin(i / 6) * 26]), 0.9);
+for (let i = 0; i < 14; i++) stroke(paint(i % 2 ? 'naphthol red medium' : 'azo yellow medium'), line(500 + (i % 7) * 44, 330 + Math.floor(i / 7) * 40, 530 + (i % 7) * 44, 350 + Math.floor(i / 7) * 40, 5), 0.75);
+// 4) a curved stroke with a light touch (a green mixed on the palette from lemon yellow + king's blue), then heavy white
+const green = [0, 0, 0]; mixPigment(green, ...hexToLinear(paintByName('lemon yellow').hex), ...hexToLinear(paintByName("king's blue").hex), 0.45);
+stroke(paint('lemon yellow'), Array.from({ length: 40 }, (_, i) => [80 + i * 8, 480 + Math.sin(i / 5) * 30]), 0.4, green);
+stroke(paint('titanium white'), Array.from({ length: 40 }, (_, i) => [420 + i * 10, 490 + Math.sin(i / 6) * 26]), 0.9);
 
 const r = eng.renderAll();
 const { rgba } = eng;

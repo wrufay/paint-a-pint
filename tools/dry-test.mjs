@@ -1,8 +1,9 @@
 // Checks the drying model without a browser: prints how a stroke moves through open -> tacky -> locked,
 // and how thick paint, wet-on-wet and wet-on-dry behave.   node tools/dry-test.mjs
-import { PaintEngine, PALETTE, hexToLinear, linearToSrgb } from '../src/brush/engine.js';
+import { PaintEngine, hexToLinear, linearToSrgb } from '../src/brush/engine.js';
+import { paintByName } from '../src/brush/paints.js';
 
-const col = (name) => hexToLinear(PALETTE.find((p) => p.name === name).hex);
+const col = (name) => hexToLinear(paintByName(name).hex);
 // mean colour of a 9x9 patch, so a bristle gap under one pixel doesn't decide the answer
 const px = (eng, x, y) => [0, 1, 2].map((k) => {
   let s = 0;
@@ -30,7 +31,7 @@ function census(eng) {
 console.log('— 1. one stroke drying (wetSeconds = 90, timeScale 1) —');
 {
   const eng = new PaintEngine({ width: 600, height: 200, seed: 3 });
-  stroke(eng, col('cerulean'), line(40, 100, 560, 100));
+  stroke(eng, col("king's blue"), line(40, 100, 560, 100));
   let t = 0;
   for (const target of [0, 30, 60, 90, 120, 180, 240, 360, 600, 1200]) {
     eng.advance(target - t); t = target;
@@ -42,7 +43,7 @@ console.log('— 1. one stroke drying (wetSeconds = 90, timeScale 1) —');
 console.log('\n— 2. thick vs thin: time until the paint stops being open —');
 for (const [label, passes] of [['1 pass', 1], ['3 passes', 3]]) {
   const eng = new PaintEngine({ width: 600, height: 200, seed: 3 });
-  for (let p = 0; p < passes; p++) stroke(eng, col('cerulean'), line(40, 100, 560, 100));
+  for (let p = 0; p < passes; p++) stroke(eng, col("king's blue"), line(40, 100, 560, 100));
   let t = 0;
   while (census(eng).open > 0 && t < 20000) { eng.advance(10); t += 10; }
   console.log(`${label}: open until ~${t}s`);
@@ -51,9 +52,9 @@ for (const [label, passes] of [['1 pass', 1], ['3 passes', 3]]) {
 console.log('\n— 3. wet-on-wet vs wet-on-dry (yellow stroke, then blue across it) —');
 for (const [label, wait] of [['wet-on-wet (blue right after)', 0], ['wet-on-dry (blue after drying)', 'dry']]) {
   const eng = new PaintEngine({ width: 300, height: 200, seed: 5 });
-  stroke(eng, col('cadmium yellow'), line(40, 100, 260, 100));
+  stroke(eng, col('lemon yellow'), line(40, 100, 260, 100));
   if (wait === 'dry') eng.dryAll();
-  stroke(eng, col('ultramarine'), line(150, 40, 150, 160));
+  stroke(eng, col('prussian blue hue'), line(150, 40, 150, 160));
   const c = px(eng, 150, 100), rest = px(eng, 150, 60);
   console.log(`${label.padEnd(34)} crossing rgb(${c})   blue alone rgb(${rest})`);
 }
@@ -61,7 +62,7 @@ for (const [label, wait] of [['wet-on-wet (blue right after)', 0], ['wet-on-dry 
 console.log('\n— 4. dries darker —');
 {
   const eng = new PaintEngine({ width: 300, height: 200, seed: 5 });
-  stroke(eng, col('cadmium yellow'), line(40, 100, 260, 100));
+  stroke(eng, col('lemon yellow'), line(40, 100, 260, 100));
   eng.renderAll();
   const i = (100 * 300 + 150) * 4, wet = [...eng.rgba.slice(i, i + 3)];
   eng.dryAll(); eng.renderAll();
@@ -71,7 +72,7 @@ console.log('\n— 4. dries darker —');
 console.log('\n— 5. cost —');
 {
   const eng = new PaintEngine({ width: 1200, height: 900, seed: 3 });
-  for (let k = 0; k < 40; k++) stroke(eng, col(k % 2 ? 'cerulean' : 'cadmium yellow'), line(40, 40 + k * 20, 1160, 60 + k * 20, 90));
+  for (let k = 0; k < 40; k++) stroke(eng, col(k % 2 ? "king's blue" : 'lemon yellow'), line(40, 40 + k * 20, 1160, 60 + k * 20, 90));
   const a = performance.now(); eng.advance(1); const b = performance.now();
   console.log(`painted 40 long strokes; one drying pass over ${census(eng).wet} wet px: ${(b - a).toFixed(1)}ms`);
   eng.renderAll();

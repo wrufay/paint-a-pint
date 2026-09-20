@@ -13,6 +13,7 @@
 //   • Everything is lit from paint height (normal map + a touch of gloss), so thick paint reads as thick.
 
 import { mixPigment } from './pigment.js';
+import { OPACITY } from './paints.js';
 
 export const DEFAULTS = {
   size: 46,            // brush width in canvas px
@@ -57,20 +58,6 @@ export function hexToLinear(hex) {
   const n = parseInt(hex.replace('#', ''), 16);
   return [srgbToLinear(((n >> 16) & 255) / 255), srgbToLinear(((n >> 8) & 255) / 255), srgbToLinear((n & 255) / 255)];
 }
-
-// Tube-colour palette in the spirit of an impressionist's limited box (no black).
-export const PALETTE = [
-  { name: 'titanium white', hex: '#f4f1ea' },
-  { name: 'cadmium yellow', hex: '#f2c21b' },
-  { name: 'yellow ochre', hex: '#c98f2b' },
-  { name: 'cadmium red', hex: '#d93a2b' },
-  { name: 'alizarin crimson', hex: '#8f1f38' },
-  { name: 'burnt sienna', hex: '#8a4326' },
-  { name: 'ultramarine', hex: '#2a3f9e' },
-  { name: 'cerulean', hex: '#3d8fc6' },
-  { name: 'viridian', hex: '#1f7a62' },
-  { name: 'sap green', hex: '#5b8a2b' },
-];
 
 function mulberry32(a) {
   return function () {
@@ -176,7 +163,8 @@ export class PaintEngine {
   }
 
   // ── stroke ────────────────────────────────────────────────────────────────
-  beginStroke(x, y, pressure, colorLinear) {
+  // `paint` (an entry from paints.js) is optional: it sets how solidly the paint covers and how strongly it tints a mix.
+  beginStroke(x, y, pressure, colorLinear, paint) {
     const P = this.params, r = this.rand;
     // per-stroke colour drift: nudge lightness and one channel a little
     const j = P.hueJitter, l = 1 + (r() - 0.5) * j * 2;
@@ -203,6 +191,7 @@ export class PaintEngine {
     }
     this.stroke = {
       bristles, px: x, py: y, sx: x, sy: y, moved: 0, pressure,
+      opacity: paint ? OPACITY[paint.opacity] ?? 1 : 1, strength: paint?.strength ?? 1,
       axis: [Math.cos(2 * (P.fixedAngle * Math.PI / 180)), Math.sin(2 * (P.fixedAngle * Math.PI / 180))], // doubled-angle state
       started: false,
     };
@@ -279,13 +268,15 @@ export class PaintEngine {
           // (only from pixels that actually hold wet paint, not bare gesso, or the bristle bleaches itself)
           const present = Math.min(1, tw * 8);
           if (wk > 0.02 && present > 0.05 && P.pickup > 0) {
-            const t = Math.min(0.5, P.pickup * wk * present * amt * (1.4 - loadFrac));
+            let t = Math.min(0.5, P.pickup * wk * present * amt * (1.4 - loadFrac));
+            t /= t + (1 - t) * s.strength;   // a strong pigment on the bristle wins over what it drags through
             mix3(tmp, b.c0, b.c1, b.c2, color[c], color[c + 1], color[c + 2], t);
             b.c0 = tmp[0]; b.c1 = tmp[1]; b.c2 = tmp[2];
           }
           // lay paint down: opaque, less so as the bristle runs empty or the paint is thinned
-          const alpha = Math.min(1, amt * P.opacity * transp * (0.6 + 0.4 * Math.min(1, loadFrac * 3)));
-          mix3(tmp, color[c], color[c + 1], color[c + 2], b.c0, b.c1, b.c2, alpha);
+          const alpha = Math.min(1, amt * P.opacity * s.opacity * transp * (0.6 + 0.4 * Math.min(1, loadFrac * 3)));
+          const mixT = alpha * s.strength / (alpha * s.strength + (1 - alpha));   // strong pigments take over a mix faster
+          mix3(tmp, color[c], color[c + 1], color[c + 2], b.c0, b.c1, b.c2, mixT);
           // over dried paint there is nothing to mix with: the new paint just covers it
           const cover = Math.min(1, film[i] * 10) * (1 - wk);
           for (let k = 0; k < 3; k++) {

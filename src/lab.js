@@ -1,5 +1,6 @@
 // Brush lab: just the acrylic engine, a palette, and live sliders. Tune on the iPad, copy the numbers back.
-import { PaintEngine, DEFAULTS, PALETTE, hexToLinear } from './brush/engine.js';
+import { PaintEngine, DEFAULTS, hexToLinear } from './brush/engine.js';
+import { PAINTS, PALETTES } from './brush/paints.js';
 
 const W = 1200, H = 900;
 const canvas = document.getElementById('paper');
@@ -53,12 +54,14 @@ for (const [k, label, min, max, step] of SLIDERS) {
 }
 
 // ── palette ─────────────────────────────────────────────────────────────────
-let color = hexToLinear(PALETTE[0].hex);
+const box = PALETTES['my box'].map((id) => PAINTS.find((p) => p.id === id));
+let paint = box[1], color = hexToLinear(paint.hex);
 const pal = document.getElementById('palette');
-PALETTE.forEach((p, i) => {
+box.forEach((p) => {
   const b = document.createElement('button');
-  b.className = 'sw' + (i === 0 ? ' on' : ''); b.style.background = p.hex; b.title = p.name; b.setAttribute('aria-label', p.name);
-  b.addEventListener('click', () => { color = hexToLinear(p.hex); pal.querySelectorAll('.sw').forEach((s) => s.classList.remove('on')); b.classList.add('on'); });
+  const name = `${p.brand} · ${p.name}${p.code ? ' · ' + p.code : ''}`;
+  b.className = 'sw' + (p === paint ? ' on' : ''); b.style.background = p.hex; b.title = name; b.setAttribute('aria-label', name);
+  b.addEventListener('click', () => { paint = p; color = hexToLinear(p.hex); pal.querySelectorAll('.sw').forEach((s) => s.classList.remove('on')); b.classList.add('on'); });
   pal.appendChild(b);
 });
 
@@ -89,7 +92,7 @@ canvas.addEventListener('pointerdown', (e) => {
   const [x, y] = toCanvas(e);
   engine.snapshot(); engine.setTime(nowS());
   last = null;
-  engine.beginStroke(x, y, pressureOf(e, x, y), color);
+  engine.beginStroke(x, y, pressureOf(e, x, y), color, paint);
   last = [x, y];
 });
 canvas.addEventListener('pointermove', (e) => {
