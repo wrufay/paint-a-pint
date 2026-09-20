@@ -22,7 +22,8 @@ Click the easel. The camera moves in and a card appears with the paints.
 | paint | click a colour, or press **1**-**9** (card order) |
 | brush | flat, filbert (oval, width follows pressure), round (click for a dab) or palette knife (flat planes with a raised edge) |
 | size | the slider, or **[** and **]** |
-| undo | **z** (one level) |
+| undo | **z**, many steps back (up to 40) |
+| mixing palette | **p**, or the button: a tray to squeeze paints onto, mix on with a knife, and tap a colour from to load your brush |
 | wetness view | **w**: blue = still workable, orange = getting tacky, no tint = dry |
 | dry now | skips the wait: everything wet becomes dry paint |
 | lay it flat / stand it up | puts the canvas on the desk for a bird's-eye view, and back on the easel |
