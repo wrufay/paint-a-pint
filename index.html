@@ -62,12 +62,12 @@
     .btn.sel { background: var(--ink); color: var(--cream); }
     .btn.primary { background: var(--terracotta); border-color: var(--terracotta); color: var(--cream); font-weight: var(--weight-bold); }
     .btn.primary:hover { filter: brightness(1.06); }
-    .tools { display: flex; gap: 8px; }
-    .tools .btn { margin-top: 0; }
     /* card layout: main controls, a dashed rule, then a compact 3-column toolbar (see docs/design/DESIGN.md, "Paint card") */
     .card-tools { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 0 0 12px; }
     .card-tools .btn { margin-top: 0; padding: 6px 4px; font-size: var(--text-xs); letter-spacing: 0; white-space: nowrap; }
     .card-tools.ruled { padding-top: 12px; border-top: 1.5px dashed var(--line); }
+    .card-tools.four { grid-template-columns: repeat(4, 1fr); }
+    .card-tools.four .btn { padding-left: 2px; padding-right: 2px; }
     .btn.block { margin: 0 0 12px; }
     #esc { font-size: var(--text-xs); color: var(--ink-soft); margin: 10px 0 0; text-align: center; }
 
@@ -97,11 +97,9 @@
       <h2>PAINT</h2>
       <div id="swatches"></div>
       <div class="row"><label for="size">size</label><input id="size" type="range" min="6" max="70" value="26" /></div>
-      <div class="tools">
-        <button class="btn" id="undo">undo</button>
-        <button class="btn" id="dry">dry now</button>
-      </div>
+      <button class="btn" id="undo">undo</button>
       <button class="btn" id="clear">clear</button>
+      <button class="btn" id="dry">dry now</button>
       <button class="btn primary" id="back">hang it up &amp; go back</button>
       <p id="esc">esc works too</p>
     </aside>
