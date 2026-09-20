@@ -17,6 +17,7 @@ import { mixPigment, PIGMENT } from './pigment.js';
 import { OPACITY } from './paints.js';
 
 export const DEFAULTS = {
+  shape: 'flat',       // 'flat' (a row of bristles), 'filbert' (oval: light pressure paints a narrow rounded mark), 'round' (a disc: a click makes a round dab)
   size: 46,            // brush width in canvas px
   bristles: 34,        // bristles across the brush
   load: 1.0,           // paint on each bristle at the start of a stroke
@@ -184,28 +185,51 @@ export class PaintEngine {
       Math.max(0, colorLinear[2] * l * (1 + (r() - 0.5) * j)),
     ];
     const N = Math.max(4, P.bristles | 0), bristles = [];
-    const rad = Math.min(3.2, Math.max(0.9, (P.size / N) * 0.95));
-    for (let i = 0; i < N; i++) {
-      const u = (i + 0.5) / N - 0.5;                                  // -0.5 .. 0.5 across the row
-      const edge = Math.pow(Math.abs(u) * 2, 3);                      // outer bristles are shorter
-      const t = P.bristleTint, load0 = P.load * (0.7 + r() * 0.6);
+    const shape = P.shape === 'round' || P.shape === 'filbert' ? P.shape : 'flat';
+    const t = P.bristleTint;
+    const mk = (ox, oy, rad, ctc) => {
+      const load0 = P.load * (0.7 + r() * 0.6);
       bristles.push({
-        ox: (u + (r() - 0.5) * (0.6 / N)) * P.size,
-        oy: (r() - 0.5) * P.size * 0.1 + edge * P.size * 0.06,
-        rad: rad * (0.85 + r() * 0.3),
-        stiff: 0.72 + r() * 0.28,
-        ctc: Math.min(1, r() * 0.55 + edge * 0.5),                    // how much pressure it needs to touch
+        ox, oy, rad: rad * (0.85 + r() * 0.3), stiff: 0.72 + r() * 0.28, ctc,     // ctc: how much pressure it needs to touch
         load0, load: load0,
         c0: base[0] * (1 + (r() - 0.5) * t), c1: base[1] * (1 + (r() - 0.5) * t), c2: base[2] * (1 + (r() - 0.5) * t),
       });
+    };
+    let bristleR;
+    if (shape === 'round') {
+      // a disc of bristles: pressure decides how many of the outer ones touch, so a light press is a small dot.
+      // Fewer, fatter bristles than the flat brush, or the disc would cost far too much to paint with.
+      const M = Math.max(14, Math.round(N * 0.9)), R = P.size / 2, golden = 2.399963;
+      bristleR = Math.min(5.5, Math.max(1.2, (R * 2.1) / Math.sqrt(M)));
+      for (let i = 0; i < M; i++) {
+        const rr = Math.sqrt((i + 0.5) / M) * R, a = i * golden, e = (rr / R) * (rr / R);
+        mk(Math.cos(a) * rr, Math.sin(a) * rr, bristleR, Math.min(1, r() * 0.35 + e * 0.75));
+      }
+    } else {
+      bristleR = Math.min(3.2, Math.max(0.9, (P.size / N) * 0.95));
+      for (let i = 0; i < N; i++) {
+        const u = (i + 0.5) / N - 0.5;                                  // -0.5 .. 0.5 across the row
+        const ox = (u + (r() - 0.5) * (0.6 / N)) * P.size;
+        if (shape === 'filbert') {
+          // an oval tip: the middle bristles reach furthest and the ends need a firm press, so the mark's width follows pressure
+          const e = Math.pow(Math.abs(u) * 2, 2);
+          mk(ox, (r() - 0.5) * P.size * 0.06 - Math.sqrt(Math.max(0, 1 - e)) * P.size * 0.2, bristleR, Math.min(1, r() * 0.4 + e * 0.85));
+        } else {
+          const edge = Math.pow(Math.abs(u) * 2, 3);                    // outer bristles are shorter
+          mk(ox, (r() - 0.5) * P.size * 0.1 + edge * P.size * 0.06, bristleR, Math.min(1, r() * 0.55 + edge * 0.5));
+        }
+      }
     }
     this.stroke = {
       bristles, px: x, py: y, sx: x, sy: y, moved: 0, pressure,
       opacity: paint ? OPACITY[paint.opacity] ?? 1 : 1, strength: paint?.strength ?? 1,
       axis: [Math.cos(2 * (P.fixedAngle * Math.PI / 180)), Math.sin(2 * (P.fixedAngle * Math.PI / 180))], // doubled-angle state
       started: false,
+      step: 1,   // pixels of travel per deposit, and the weight each deposit carries
     };
     this._deposit(x, y, pressure, this.stroke.axis, 0, 0);
+    // fat bristles overlap heavily, so deposit every couple of pixels (each carrying that much more paint) instead of every one
+    this.stroke.step = shape === 'round' ? Math.max(1, Math.round(bristleR * 0.7)) : 1;
   }
 
   strokeTo(x, y, pressure) {
@@ -225,7 +249,7 @@ export class PaintEngine {
     s.started = true;
     s.axis[0] += (vx - s.axis[0]) * k; s.axis[1] += (vy - s.axis[1]) * k;
 
-    const steps = Math.max(1, Math.ceil(dist)); // one deposit per pixel of travel
+    const steps = Math.max(1, Math.ceil(dist / s.step)); // one deposit per `step` pixels of travel
     for (let i = 1; i <= steps; i++) {
       const f = i / steps;
       this._deposit(s.px + dx * f, s.py + dy * f, s.pressure + (pressure - s.pressure) * f, s.axis, dx / dist, dy / dist);
@@ -243,6 +267,7 @@ export class PaintEngine {
     const press = Math.min(1, Math.max(0.05, pressure));
     const spread = 0.55 + 0.6 * press;               // harder press splays the row wider
     const tmp = [0, 0, 0];
+    const w = s.step;                                 // a deposit stands in for `w` pixels of travel
     const sx = -uy, sy = ux;                          // across the direction of travel: paint is shoved this way
     const pushing = P.push > 0 && (ux !== 0 || uy !== 0);
     let np = 0;                                       // queued shoves, applied after every bristle has been through
@@ -280,7 +305,7 @@ export class PaintEngine {
           // shove: open paint under the bristle is pushed sideways to just outside it (a groove here, a ridge there)
           if (pushing && wk > 0.05 && tw > 1e-4 && np < PUSH_MAX) {
             const across = (xx - bx) * sx + (yy - by) * sy;
-            const f = Math.min(0.5, P.push * wk * contact * fall);
+            const f = 1 - Math.pow(1 - Math.min(0.5, P.push * wk * contact * fall), w);
             const d = (across >= 0 ? 1 : -1) * (r + 0.9);
             const fx = bx + sx * d, fy = by + sy * d, tx = Math.floor(fx), ty = Math.floor(fy), ax = fx - tx, ay = fy - ty;
             if (tx >= 0 && tx < W - 1 && ty >= 0 && ty < H - 1 && f > 0.002 && np + 4 <= PUSH_MAX) {
@@ -300,7 +325,7 @@ export class PaintEngine {
           // (only from pixels that actually hold wet paint, not bare gesso, or the bristle bleaches itself)
           const present = Math.min(1, tw * 8);
           if (wk > 0.02 && present > 0.05 && P.pickup > 0) {
-            let t = Math.min(0.5, P.pickup * wk * present * amt * (1.4 - loadFrac));
+            let t = 1 - Math.pow(1 - Math.min(0.5, P.pickup * wk * present * amt * (1.4 - loadFrac)), w);
             // a pixel that still looks like bare canvas holds no pigment worth dragging: without this the bristles
             // bleach themselves on thin, gesso-tinted paint and go on laying gesso-coloured ridges
             const g = this.gesso, looks = Math.abs(color[c] - g[0]) + Math.abs(color[c + 1] - g[1]) + Math.abs(color[c + 2] - g[2]);
@@ -310,7 +335,7 @@ export class PaintEngine {
             b.c0 = tmp[0]; b.c1 = tmp[1]; b.c2 = tmp[2];
           }
           // lay paint down: opaque, less so as the bristle runs empty or the paint is thinned
-          const alpha = Math.min(1, amt * P.opacity * s.opacity * transp * (0.6 + 0.4 * Math.min(1, loadFrac * 3)));
+          const alpha = 1 - Math.pow(1 - Math.min(1, amt * P.opacity * s.opacity * transp * (0.6 + 0.4 * Math.min(1, loadFrac * 3))), w);
           const mixT = alpha * s.strength / (alpha * s.strength + (1 - alpha));   // strong pigments take over a mix faster
           // over bare canvas or dried paint the old colour is a ground, not a paint: don't let it weigh in like white paint
           mix3(tmp, color[c], color[c + 1], color[c + 2], b.c0, b.c1, b.c2, mixT, PIGMENT.lumPow * Math.min(1, tw / 0.05));
@@ -323,10 +348,10 @@ export class PaintEngine {
 
           // new paint arrives as solids + water, so its thickness is the same as before but it now has to dry
           const room = Math.max(0, 1.6 - film[i] - tw);
-          const laid = Math.min(room, amt * P.heightGain * (0.35 + 0.65 * Math.min(1, loadFrac)));
+          const laid = Math.min(room, amt * w * P.heightGain * (0.35 + 0.65 * Math.min(1, loadFrac)));
           height[i] = s0 + laid * (1 - wm);
           water[i] = w0 + laid * wm;
-          b.load -= P.consumption * amt;
+          b.load -= P.consumption * amt * w;
 
           if (xx < x0) x0 = xx; if (xx > x1) x1 = xx; if (yy < y0) y0 = yy; if (yy > y1) y1 = yy;
         }

@@ -2,7 +2,7 @@
 // (down / move / up / clear / composite, .canvas, .dirty), so main.js only swaps the class.
 import { PaintEngine, DEFAULTS, hexToLinear } from './brush/engine.js';
 import { PAINTS, PALETTES } from './brush/paints.js';
-import { buildTunePanel, loadParams } from './brush/tune.js';
+import { buildTunePanel, loadParams, saveParams } from './brush/tune.js';
 
 export const BOX = PALETTES['my box'].map((id) => PAINTS.find((p) => p.id === id));
 
@@ -134,6 +134,21 @@ export function initAcrylicUI(painter, { onBack }) {
   document.getElementById('dry').onclick = () => painter.dryNow();
   document.getElementById('clear').onclick = () => painter.clear();
   document.getElementById('back').onclick = onBack;
+
+  // brush shape: flat, filbert (oval) or round (also gives single dabs)
+  const shapes = document.createElement('div');
+  shapes.className = 'tools'; shapes.style.cssText = 'margin-top:8px;';
+  const shapeBtns = {};
+  const syncShape = () => { for (const k in shapeBtns) shapeBtns[k].classList.toggle('sel', painter.engine.params.shape === k); };
+  for (const k of ['flat', 'filbert', 'round']) {
+    const b = document.createElement('button');
+    b.className = 'btn'; b.textContent = k; b.style.cssText = 'padding-left:2px;padding-right:2px;font-size:11px;letter-spacing:0;';
+    b.title = { flat: 'flat brush: a row of bristles', filbert: 'filbert: an oval tip, width follows pressure', round: 'round brush: click for a dab' }[k];
+    b.onclick = () => { painter.engine.params.shape = k; saveParams(painter.engine.params); syncShape(); };
+    shapeBtns[k] = b; shapes.appendChild(b);
+  }
+  syncShape();
+  size.parentNode.after(shapes);
 
   // settings / wetness / save: built here (not in index.html) so the card layout stays the design session's call
   const extra = document.createElement('div');
