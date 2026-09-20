@@ -139,8 +139,8 @@ The card should read as one intentional object, not a stack of buttons. Top to b
 
 1. `PAINT` heading, then the 9 swatches.
 2. `size` slider.
-3. **Brush shape** (flat, filbert, round): a `.card-tools` row. The active shape is `.btn.sel` (ink fill, cream text).
-4. **Lay it flat / stand it up**: a full-width `.btn.block`.
+3. **Brush shape** (flat, filbert, round, knife): a `.card-tools.four` row, one button per shape in a single line. The active shape is `.btn.sel` (ink fill, cream text). For any other count use plain `.card-tools` (3 columns); 5 or more shapes would need a second row or a wider card.
+4. **Full-width actions** (lay it flat / stand it up, mixing palette): each a `.btn.block`.
 5. A dashed rule, then the **secondary toolbar**: one `.card-tools.ruled` grid holding undo, clear, dry now, wetness, save png, settings. Three columns, so two rows of three. Toggles (wetness, settings) use `.btn.sel` while on.
 6. **Hang it up & go back**, the only `.btn.primary`, always last so it stays the obvious way out.
 7. The `esc` hint.
