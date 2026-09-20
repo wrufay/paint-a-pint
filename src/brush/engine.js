@@ -55,7 +55,8 @@ const DAB = 0.08;                                               // thickness of 
 // water one DAB must lose to go from fresh to F_OPEN, per unit of wetSeconds
 const E0 = DAB * (1 - F_FRESH) * (F_FRESH / (1 - F_FRESH) - F_OPEN / (1 - F_OPEN));
 const PUSH_MAX = 65536, pushIdx = new Int32Array(PUSH_MAX), pushS = new Float32Array(PUSH_MAX), pushW = new Float32Array(PUSH_MAX), pushC = new Float32Array(PUSH_MAX * 3);
-const TILE = 32;                                                // drying and shading work on tiles, only where paint is wet
+const TILE = 32;
+const UNDO_STEPS = 40, UNDO_BYTES = 96 * 1024 * 1024;              // how many strokes back you can go, and the most memory the steps may hold                                                // drying and shading work on tiles, only where paint is wet
 const smooth01 = (t) => { t = t < 0 ? 0 : t > 1 ? 1 : t; return t * t * (3 - 2 * t); };
 
 export const srgbToLinear = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
@@ -103,6 +104,7 @@ export class PaintEngine {
     this.tileProg = new Float32Array(this.TX * this.TY);   // mean dryness when last shaded
     this.gesso = [srgbToLinear(0.93), srgbToLinear(0.9), srgbToLinear(0.83)];   // bare ground colour
     this.debugWet = false;               // tint paint by how workable it is: blue open, orange tacky, none locked
+    this._undo = []; this._cur = null; this._undoBytes = 0;
     this.now = 0;                        // simulated seconds
     this._t = undefined; this._pend = 0;
     this.stroke = null;
@@ -129,7 +131,7 @@ export class PaintEngine {
   }
 
   // "Dry now": everything wet becomes film, as if left for a day.
-  dryAll() { this.advance(86400); this.tileDirty.fill(2); this.anyDirty = true; }
+  dryAll() { this._saveTiles(0, 0, this.W, this.H); this.advance(86400); this.tileDirty.fill(2); this.anyDirty = true; }
 
   _makeGround(seed) {
     const { W, H } = this, r = mulberry32(seed * 31 + 5);
@@ -154,6 +156,7 @@ export class PaintEngine {
   }
 
   clear() {
+    this._saveTiles(0, 0, this.W, this.H);   // (a no-op unless an undo step is open)
     const n = this.W * this.H;
     const g = this.gesso; // warm gesso
     for (let i = 0; i < n; i++) { this.color[i * 3] = g[0]; this.color[i * 3 + 1] = g[1]; this.color[i * 3 + 2] = g[2]; }
@@ -161,20 +164,62 @@ export class PaintEngine {
     this.tileActive.fill(0); this.tileProg.fill(0); this.tileDirty.fill(2); this.anyDirty = true;
   }
 
-  // one-level undo (buffers are reused, so no allocation per stroke)
+  // ── undo: copy-on-write by tile ───────────────────────────────────────────
+  // snapshot() opens a new undo step. Whatever the step goes on to change is saved tile by tile, the first time a tile is
+  // touched (_saveTiles), so a step costs only the paint it actually touched and many steps fit in memory.
+  // restore() puts the last step back and returns whether anything changed.
   snapshot() {
-    const n = this.height.length;
-    const s = this._snap || (this._snap = { c: new Float32Array(n * 3), h: new Float32Array(n), w: new Float32Array(n), f: new Float32Array(n), a: new Uint8Array(this.tileActive.length) });
-    s.c.set(this.color); s.h.set(this.height); s.w.set(this.water); s.f.set(this.film); s.a.set(this.tileActive);
-    this._hasSnap = true;
+    const last = this._undo[this._undo.length - 1];
+    if (last && last.tiles.length === 0) { this._cur = last; return; }   // the previous step changed nothing: reuse it
+    this._cur = { tiles: [], seen: new Uint8Array(this.TX * this.TY), bytes: 0 };
+    this._undo.push(this._cur);
   }
+
+  _saveTiles(x0, y0, x1, y1) {
+    const cur = this._cur;
+    if (!cur) return;
+    const { W, H, TX, TY } = this;
+    const tx0 = Math.max(0, Math.floor(x0 / TILE)), tx1 = Math.min(TX - 1, Math.floor((x1 - 1) / TILE));
+    const ty0 = Math.max(0, Math.floor(y0 / TILE)), ty1 = Math.min(TY - 1, Math.floor((y1 - 1) / TILE));
+    for (let ty = ty0; ty <= ty1; ty++) {
+      for (let tx = tx0; tx <= tx1; tx++) {
+        const t = ty * TX + tx;
+        if (cur.seen[t]) continue;
+        cur.seen[t] = 1;
+        const xa = tx * TILE, ya = ty * TILE, w = Math.min(W, xa + TILE) - xa, h = Math.min(H, ya + TILE) - ya;
+        const c = new Float32Array(w * h * 3), hh = new Float32Array(w * h), ww = new Float32Array(w * h), ff = new Float32Array(w * h);
+        for (let y = 0; y < h; y++) {
+          const o = (ya + y) * W + xa;
+          c.set(this.color.subarray(o * 3, (o + w) * 3), y * w * 3);
+          hh.set(this.height.subarray(o, o + w), y * w); ww.set(this.water.subarray(o, o + w), y * w); ff.set(this.film.subarray(o, o + w), y * w);
+        }
+        cur.tiles.push({ t, xa, ya, w, h, c, hh, ww, ff, active: this.tileActive[t] });
+        const bytes = w * h * 6 * 4;
+        cur.bytes += bytes; this._undoBytes += bytes;
+      }
+    }
+    while (this._undo.length > 1 && (this._undo.length > UNDO_STEPS || this._undoBytes > UNDO_BYTES)) this._undoBytes -= this._undo.shift().bytes;   // forget the oldest
+  }
+
   restore() {
-    if (!this._hasSnap) return false;
-    const s = this._snap;
-    this.color.set(s.c); this.height.set(s.h); this.water.set(s.w); this.film.set(s.f); this.tileActive.set(s.a);
-    this._hasSnap = false;
-    this.tileDirty.fill(2); this.anyDirty = true;
-    return true;
+    while (this._undo.length) {
+      const step = this._undo.pop();
+      this._undoBytes -= step.bytes;
+      if (step === this._cur) this._cur = null;
+      if (!step.tiles.length) continue;                                  // an empty step (nothing changed): skip to the one before
+      const { W } = this;
+      for (const t of step.tiles) {
+        for (let y = 0; y < t.h; y++) {
+          const o = (t.ya + y) * W + t.xa;
+          this.color.set(t.c.subarray(y * t.w * 3, (y + 1) * t.w * 3), o * 3);
+          this.height.set(t.hh.subarray(y * t.w, (y + 1) * t.w), o); this.water.set(t.ww.subarray(y * t.w, (y + 1) * t.w), o); this.film.set(t.ff.subarray(y * t.w, (y + 1) * t.w), o);
+        }
+        this.tileActive[t.t] = t.active;
+        this._markDirty(t.xa - 1, t.ya - 1, t.xa + t.w + 1, t.ya + t.h + 1);
+      }
+      return true;
+    }
+    return false;
   }
 
   // ── stroke ────────────────────────────────────────────────────────────────
@@ -237,7 +282,7 @@ export class PaintEngine {
     }
     this.stroke = {
       bristles, px: x, py: y, sx: x, sy: y, moved: 0, pressure,
-      knife, id: ++this._strokeId,
+      knife, id: ++this._strokeId, reach: P.size * 0.62 + 14,   // how far from the brush a deposit can touch (for undo)
       opacity: paint ? OPACITY[paint.opacity] ?? 1 : 1, strength: paint?.strength ?? 1,
       axis: [Math.cos(2 * (P.fixedAngle * Math.PI / 180)), Math.sin(2 * (P.fixedAngle * Math.PI / 180))], // doubled-angle state
       started: false,
@@ -285,6 +330,7 @@ export class PaintEngine {
     const spread = K ? 1 : 0.55 + 0.6 * press;       // harder press splays the row wider
     const dryP = K ? P.dry * 0.2 : P.dry, tackP = K ? P.tack * 0.3 : P.tack, pushP = K ? Math.min(0.9, P.push * 2.5) : P.push;
     const tmp = [0, 0, 0];
+    this._saveTiles(cx - s.reach, cy - s.reach, cx + s.reach, cy + s.reach);
     const w = s.step;                                 // a deposit stands in for `w` pixels of travel
     const sx = -uy, sy = ux;                          // across the direction of travel: paint is shoved this way
     const pushing = pushP > 0 && (ux !== 0 || uy !== 0);

@@ -44,7 +44,7 @@ export class AcrylicPainter {
   setPaint(paint) { this.paint = paint; this.color = hexToLinear(paint.hex); this.tool = 'brush'; }
   setMixedColour(rgb, paint) { this.paint = paint; this.color = rgb; this.tool = 'brush'; }   // a colour mixed on the palette, standing in for a tube
   clear() { this.engine.snapshot(); this.engine.clear(); this.dirty = false; this._blit(true); }
-  undo() { if (this.engine.restore()) this._blit(true); }
+  undo() { if (this.engine.restore()) this._blit(false); }
   dryNow() { this.engine.snapshot(); this.engine.dryAll(); this._blit(true); }
   setWetnessView(on) { this.engine.setDebugWet(on); this._blit(true); }   // blue = still workable, orange = tacky, none = dry
   savePng() {
