@@ -1,4 +1,4 @@
-# paint-a-pint 🎨⊹°
+# paint-a-pint 🎨⊹° here, there, and everywhere
 
 Welcome to [Fay's](https://faywu.ca/) solo build for _[Hack the North '26](https://hackthenorth2026.devpost.com/)_ (๑ᵔ⤙ᵔ๑)
 
@@ -53,6 +53,8 @@ Hence, are not true measurements and are not intended to yield exact real-world 
 
 ## Proud of
 
+Learning some Three.js!
+
 **Paint mixing on the canvas**: My biggest fear for this project was having it end up as a digital art tool with no differentiator, but seeing the painting mix made me feel like I was back on a real canvas.
 
 ![A painting made in paint-a-pint, shown on the overhead desk with the paint card on the left, tubes and brushes on the right, and a palette of mixed colours](docs/assets/artwork.png)
@@ -80,7 +82,7 @@ Regenerate the pigment tables with `node tools/gen-spectral-data.mjs`. The Node 
 
 Pigment mixing tables come from [Spectral.js](https://github.com/rvanwijnen/spectral.js) by Ronald van Wijnen (MIT), used as a dev dependency to generate `src/brush/spectral-data.js`.
 
-[Windsor & Newton Galeria](https://www.winsornewton.com/en-ca/collections/galeria-acrylic) and [Amsterdam](https://www.royaltalens.com/collections/amsterdam-standard-series-acrylics) acrylics for being the best cost affordable acrylics that carried me through years of silly painting. **Reference images and exact colour codes of paints I own were used to generate the 3D tubes.**
+[Windsor & Newton Galeria](https://www.winsornewton.com/en-ca/collections/galeria-acrylic) and [Amsterdam](https://www.royaltalens.com/collections/amsterdam-standard-series-acrylics) acrylics for being the best cost affordable acrylics that carried me through years of silly painting. Reference images and **exact colour codes of paints I own** were used to generate the 3D tubes.
 
 
 
