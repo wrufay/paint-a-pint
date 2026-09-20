@@ -5,17 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
   <title>paint-a-pint · brush lab</title>
   <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="/src/tokens.css" />
   <style>
-    :root { --cream: #fbf7ee; --pink: #e58a8a; --green: #5fa88c; --ink: #4a3b34; --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2622; font-family: var(--mono); color: var(--ink); overscroll-behavior: none; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: var(--backdrop-lab); font-family: var(--mono); color: var(--ink); overscroll-behavior: none; }
     #stage { position: fixed; inset: 0; display: grid; place-items: center; }
     #paper { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: crosshair;
              box-shadow: 0 10px 40px rgba(0,0,0,.5); background: #eee; }
 
     .note { position: fixed; background: var(--cream); border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
     .note::before { content: ""; position: absolute; top: -9px; left: 50%; width: 64px; height: 18px; transform: translateX(-50%) rotate(-2deg);
-      background: rgba(229,138,138,.75);
+      background: var(--tape-pink);
       clip-path: polygon(0 10%, 4% 0, 8% 12%, 12% 0, 92% 0, 96% 12%, 100% 0, 100% 90%, 96% 100%, 92% 88%, 88% 100%, 8% 100%, 4% 88%, 0 100%); }
 
     #palette { left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); padding: 14px 16px 10px; display: flex; gap: 10px; align-items: center; }
@@ -24,7 +24,7 @@
 
     #bar { top: max(16px, env(safe-area-inset-top)); left: 16px; padding: 10px 12px 8px; display: flex; gap: 8px; align-items: center; font-size: 12px; }
     button.b { font: inherit; font-size: 12px; letter-spacing: .05em; color: var(--ink); background: #fff; border: 1.5px solid rgba(74,59,52,.35); border-radius: 999px; padding: 8px 14px; }
-    button.b:active { background: #f0e6d6; }
+    button.b:active { background: var(--butter); }
     #tune { top: max(16px, env(safe-area-inset-top)); right: 16px; width: min(320px, calc(100vw - 32px)); max-height: calc(100vh - 130px); overflow: auto; padding: 16px 16px 12px; display: none; font-size: 12px; }
     #tune.open { display: block; }
     .row { display: grid; grid-template-columns: 96px 1fr 44px; gap: 8px; align-items: center; margin: 0 0 9px; }
@@ -33,7 +33,7 @@
     input[type=range] { width: 100%; accent-color: var(--green); }
     #tune .btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
     #out { width: 100%; height: 90px; margin-top: 10px; font: 11px var(--mono); display: none; }
-    #stat { position: fixed; left: 16px; bottom: 16px; font-size: 11px; color: #cdbfae; opacity: .8; pointer-events: none; }
+    #stat { position: fixed; left: 16px; bottom: 16px; font-size: 11px; color: var(--muted-on-dark); opacity: .8; pointer-events: none; }
   </style>
 </head>
 <body>

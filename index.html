@@ -5,16 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
   <title>paint-a-pint</title>
   <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="/src/tokens.css" />
   <style>
-    :root {
-      --cream: #fbf7ee;
-      --pink: #e58a8a;
-      --green: #5fa88c;
-      --ink: #4a3b34;
-      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-    }
     * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; background: #1c1915; overflow: hidden; font-family: var(--mono); color: var(--ink); }
+    html, body { margin: 0; height: 100%; background: var(--backdrop); overflow: hidden; font-family: var(--mono); color: var(--ink); }
     #app { position: fixed; inset: 0; }
     #app canvas { display: block; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 
@@ -24,7 +18,7 @@
     }
     .note::before { /* washi tape */
       content: ""; position: absolute; top: -9px; left: 50%; width: 64px; height: 18px;
-      transform: translateX(-50%) rotate(-2deg); background: rgba(229,138,138,.75);
+      transform: translateX(-50%) rotate(-2deg); background: var(--tape-pink);
       clip-path: polygon(0 10%, 4% 0, 8% 12%, 12% 0, 92% 0, 96% 12%, 100% 0, 100% 90%, 96% 100%, 92% 88%, 88% 100%, 8% 100%, 4% 88%, 0 100%);
     }
 
@@ -41,7 +35,7 @@
     #paint.on { opacity: 1; }
     #paint.on > * { pointer-events: auto; }
     #paper {
-      position: absolute; background: #f6efdd; touch-action: none; cursor: none;
+      position: absolute; background: var(--paper); touch-action: none; cursor: none;
       box-shadow: inset 0 0 22px rgba(90,60,30,.18);
     }
     #paper canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -51,7 +45,7 @@
       position: absolute; right: 26px; top: 50%; transform: translateY(-50%); width: 212px; padding: 22px 18px 16px;
       border: 5px dashed var(--pink); background: var(--cream);
     }
-    #card h2 { margin: 0 0 12px; color: var(--green); font-size: 20px; letter-spacing: .08em; }
+    #card h2 { margin: 0 0 12px; color: var(--ultramarine); font-size: 20px; letter-spacing: .08em; }
     #swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
     .sw { width: 100%; aspect-ratio: 1; border-radius: 50%; border: 2px solid rgba(0,0,0,.18); cursor: pointer; padding: 0; transition: transform .12s; }
     .sw:hover { transform: scale(1.08); }
@@ -63,9 +57,9 @@
       font: inherit; font-size: 12px; letter-spacing: .04em; color: var(--ink); background: #fff; cursor: pointer;
       border: 2px solid var(--ink); border-radius: 6px; padding: 7px 10px; width: 100%; margin-top: 8px;
     }
-    .btn:hover { background: #f1ead8; }
+    .btn:hover { background: var(--butter); }
     .btn.sel { background: var(--ink); color: var(--cream); }
-    .btn.primary { background: var(--green); border-color: var(--green); color: #fff; font-weight: 700; }
+    .btn.primary { background: var(--terracotta); border-color: var(--terracotta); color: var(--cream); font-weight: 700; }
     .btn.primary:hover { filter: brightness(1.06); }
     .tools { display: flex; gap: 8px; }
     .tools .btn { margin-top: 0; }
