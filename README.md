@@ -1,4 +1,4 @@
-# paint-a-pint 🎨⊹° here, there, and everywhere
+# paint-a-pint 🎨⊹° be creative here, there & everywhere
 
 Welcome to [Fay's](https://faywu.ca/) solo build for _[Hack the North '26](https://hackthenorth2026.devpost.com/)_ (๑ᵔ⤙ᵔ๑)
 
