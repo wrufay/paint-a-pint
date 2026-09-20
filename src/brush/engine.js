@@ -21,7 +21,7 @@ export const DEFAULTS = {
   size: 46,            // brush width in canvas px
   bristles: 34,        // bristles across the brush
   load: 1.0,           // paint on each bristle at the start of a stroke
-  consumption: 0.00035, // load used per pixel touched (higher = runs dry sooner)
+  consumption: 0.00028, // load used per pixel touched, for a bristle of the usual size (higher = runs dry sooner)
   opacity: 0.94,       // how opaque a full bristle lays paint (acrylic ~ opaque)
   dry: 0.75,           // dry-brush strength: how much the weave blocks an emptying bristle
   pickup: 0.14,        // how much wet paint under a bristle mixes into its colour
@@ -46,6 +46,7 @@ export const DEFAULTS = {
 };
 
 const TAU = Math.PI * 2;
+const REF_RAD = 1.3;   // bristle radius (px) the `consumption` setting is quoted for: a flat brush at the default size
 
 // Drying. f = water / (solids + water) of the wet layer. Above F_OPEN paint blends freely; below F_LOCK it is a film.
 const F_OPEN = 0.3, F_LOCK = 0.12, F_FRESH = 0.4;
@@ -192,6 +193,7 @@ export class PaintEngine {
       bristles.push({
         ox, oy, rad: rad * (0.85 + r() * 0.3), stiff: 0.72 + r() * 0.28, ctc,     // ctc: how much pressure it needs to touch
         load0, load: load0,
+        use: (REF_RAD / rad) ** 2,   // a fatter bristle touches more pixels, but it also holds more paint: same distance per load
         c0: base[0] * (1 + (r() - 0.5) * t), c1: base[1] * (1 + (r() - 0.5) * t), c2: base[2] * (1 + (r() - 0.5) * t),
       });
     };
@@ -351,7 +353,7 @@ export class PaintEngine {
           const laid = Math.min(room, amt * w * P.heightGain * (0.35 + 0.65 * Math.min(1, loadFrac)));
           height[i] = s0 + laid * (1 - wm);
           water[i] = w0 + laid * wm;
-          b.load -= P.consumption * amt * w;
+          b.load -= P.consumption * b.use * amt * w;
 
           if (xx < x0) x0 = xx; if (xx > x1) x1 = xx; if (yy < y0) y0 = yy; if (yy > y1) y1 = yy;
         }
