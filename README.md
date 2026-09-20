@@ -14,9 +14,9 @@ A digital simulation of the acrylic painting experience.
 
 ## Why
 
-It's easy for an artist to lose their home when their heart and tools are far away.
+It's easy for an artist to lose their home when their **heart** and **tools** are far away.
 
-As a second year computer science student navigating early career, life undoubtly throws an endless streaem of toils that add friction to creation, but **relinquish and regression can't be the only way.**
+As a second year computer science student navigating early career, life undoubtly throws an endless streaem of toils that add friction to creation, but **relinquish and regression** can't be the only way.
 
 I aimed to solve this through making the act of painting digital, without having to worry about costs, material, and negative respiratory impacts that real acrylic painting can entail.
 
