@@ -240,22 +240,8 @@ function easelViewPose() {
   return { pos: c.clone().addScaledVector(n, dist), quat: q, fov };
 }
 
-function paintPose() {
-  if (deskMode) return deskPose();
-  world.easel.updateMatrixWorld(true);
-  const q = new THREE.Quaternion(); world.canvasFace.getWorldQuaternion(q);
-  const c = world.canvasFace.getWorldPosition(new THREE.Vector3());
-  const n = new THREE.Vector3(0, 0, 1).applyQuaternion(q), right = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
-  const fov = 30, half = Math.tan(THREE.MathUtils.degToRad(fov / 2)), aspect = camera.aspect;
-  const wide = aspect > 1.25;
-  const distH = world.CH / 0.68 / (2 * half);
-  const distW = world.CW / (wide ? 0.68 : 0.86) / (2 * half * aspect);
-  const dist = Math.max(distH, distW);
-  const shift = 0; // centred on the page; on wide screens the card sits to the right of it
-  const lift = wide ? 0 : -0.16 * 2 * half * dist; // narrow screens: canvas sits high, card below
-  const up = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
-  const pos = c.clone().addScaledVector(n, dist).addScaledVector(right, shift).addScaledVector(up, lift);
-  return { pos, quat: q, fov };
+function paintPose() {   // the desk view for painting; the easel view is view-only, so it is the same close pose as viewing a hung painting
+  return deskMode ? deskPose() : easelViewPose();
 }
 
 const paintEl = document.getElementById('paint');
@@ -375,7 +361,7 @@ function pick(e) {
 // The tubes and brushes on the desk: they glow under the pointer, a tube picks that paint and a brush picks that shape.
 // This works in the room and in paint mode (outside the paper and the card, which sit on top of the 3D view).
 function pickProp(e) {
-  if (!world.props) return null;
+  if (!world.props || (mode === 'paint' && !deskMode)) return null;   // (nothing to pick from the view-only easel view)
   ray.setFromCamera(new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1), camera);
   const hit = ray.intersectObjects([...world.props.tubes, ...world.props.brushes], true)[0];
   return hit ? world.props.owner(hit.object) : null;
@@ -655,7 +641,7 @@ function frame(now) {
   painter.tick(now);
   if (world.tray && world.tray.update(now / 1000)) poke(2);   // the tray dries too
   // the 3D easel only needs the new pixels when it can be seen (the paint overlay hides it), and not every frame
-  if (mode !== 'paint' && painter.changed && now - texT > 100) { uploadPaint(); painter.changed = false; texT = now; poke(2); }
+  if ((mode !== 'paint' || !deskMode) && painter.changed && now - texT > 100) { uploadPaint(); painter.changed = false; texT = now; poke(2); }
 
   for (const f of world.frames) { // little pop when a painting lands on the wall
     if (f.popT < 0) continue;
