@@ -33,3 +33,26 @@ apparently what's left:
 - btw why does the paint like run out so quick lmao
 
 - ideas: shortcuts to change paint colour
+
+
+f81990c: initial thoughts
+- too many buttons in the sidebar and it doesn't look intentional. we need to do something about that for sure (hard to navigate and know quickly what to click next - potentially use the real estate on the right side?)
+
+
+
+
+FEATURES next:
+- ability to choose where the photos get hung up and stuff, be able to remove them and stuff - no backend soo yeah just a temporary room? since we're making art maybe there should be a backend but this is totally optional since they can save as png etc. i think depends on the storyline.
+
+
+other notes + context from the photos
+- want to be choosing colours from our own colour pallete we mix on, which for me was literally this old styrofoam meat tray where i'd just let the colours pile on. we can do the same thing here
+- can use paintbrushes - the thick and long ones not detail oriented ones, also canvas for acrylic, and also painting knives. water cups too i guess
+- tech: would be drawing on ipad right now but wacom is actually a great idea too because i have a wacom but it's not with me right now so i'll put that inside of what's next in devpost
+- we should make the diorama more focused on the desk rather than the whole room. perhaps we can choose different rooms like the swiss alps, my waterloo room, my home room. there are photos for inspo - they are organized
+
+
+
+todo later for design system
+- implement dark
+- fix one-off hard coded
