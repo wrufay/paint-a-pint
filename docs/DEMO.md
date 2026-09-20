@@ -11,7 +11,7 @@ Judging is a live demo (originality, UX, technical complexity, WOW), so the demo
 
 ## The script
 
-**0:00 - the hook (10 s).** Say: *"Painting is expensive, messy, and takes a whole afternoon to set up. This is a painting room where the paint is simulated: it dries on a clock, it mixes like real pigment, it holds ridges."* Click the easel: the camera flies in.
+**0:00 - the hook (10 s).** Say: *"Painting is expensive, messy, and takes a whole afternoon to set up. This is a painting room where the paint is simulated: it dries on a clock, it mixes like real pigment, it holds ridges."* Point at the desk: *"the paints are real tubes, labelled like the ones I actually use, and the brushes are in the water jar."* Click a tube, or the easel: the camera flies in.
 
 **0:10 - mixing (20 s).** Press **8** (king's blue) and lay a fat blue stroke. Press **3** (azo yellow) and drag a yellow stroke *through the edge of the blue while it is still wet*. Green appears where they meet, and streaks of both stay in it. Say: *"Blue and yellow make green because the mixer works on pigment spectra, not RGB."* Then press **1** (white) and pull a stroke through the blue: it tints, it does not just go grey.
 
