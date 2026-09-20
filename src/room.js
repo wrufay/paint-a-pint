@@ -58,24 +58,90 @@ const floorTexture = () => canvasTex(512, 512, (g, w, h) => {
 });
 
 // what the window looks at: evergreens, a lawn, a glass tower and a brick building (drawn tiny; GPU filtering blurs it)
-const backdropTexture = () => canvasTex(320, 192, (g, w, h) => {
-  const sky = g.createLinearGradient(0, 0, 0, h);
-  sky.addColorStop(0, '#cfe4f0'); sky.addColorStop(0.6, '#eaf3ef'); sky.addColorStop(1, '#f6f3dc');
+// The view through the window: sky and haze, distant hills and treeline, a lawn, and conifers in three depths. Drawn at the plane's own
+// aspect (3.55 x 3.0), so the trees are not stretched. A fixed seed keeps the forest the same on every load.
+const backdropTexture = () => canvasTex(1024, 866, (g, w, h) => {
+  let seed = 20260919;
+  const r = () => { seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const R = (a, b) => a + r() * (b - a);
+
+  // sky, with a few soft clouds
+  const sky = g.createLinearGradient(0, 0, 0, h * 0.8);
+  sky.addColorStop(0, '#bcd9ec'); sky.addColorStop(0.55, '#e1eff0'); sky.addColorStop(1, '#f6f3dc');
   g.fillStyle = sky; g.fillRect(0, 0, w, h);
-  g.fillStyle = '#8fa9bd'; g.fillRect(w * 0.8, 0, w * 0.14, h * 0.62);           // glass tower
-  g.fillStyle = 'rgba(255,255,255,.35)'; for (let y = 4; y < h * 0.6; y += 9) g.fillRect(w * 0.8, y, w * 0.14, 2);
-  g.fillStyle = '#a5563f'; g.fillRect(w * 0.66, h * 0.52, w * 0.3, h * 0.22);    // brick building
-  g.fillStyle = '#9fc46a'; g.fillRect(0, h * 0.72, w, h * 0.3);                  // lawn
-  for (let i = 0; i < 10; i++) {                                                  // evergreens
-    const x = rnd(0.02, 0.78) * w, base = h * rnd(0.74, 0.96), th = h * rnd(0.5, 0.85), tw = th * 0.42;
-    g.fillStyle = '#4a3527'; g.fillRect(x - 1, base, 2, h * 0.05);
-    for (let k = 0; k < 5; k++) {
-      const y0 = base - th + (th / 5) * k, ww = tw * (0.35 + (0.65 * (k + 1)) / 5);
-      g.fillStyle = `hsl(${rnd(118, 140)},${rnd(30, 42)}%,${rnd(20, 30)}%)`;
-      g.beginPath(); g.moveTo(x, y0 - (th / 5) * 0.2); g.lineTo(x - ww / 2, y0 + (th / 5) * 1.1); g.lineTo(x + ww / 2, y0 + (th / 5) * 1.1); g.closePath(); g.fill();
-    }
+  for (let i = 0; i < 7; i++) {
+    const cx = R(0.05, 0.95) * w, cy = R(0.05, 0.35) * h, rad = R(0.08, 0.16) * w;
+    const cloud = g.createRadialGradient(cx, cy, 0, cx, cy, rad);
+    cloud.addColorStop(0, 'rgba(255,255,255,.55)'); cloud.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = cloud; g.save(); g.translate(cx, cy); g.scale(1.9, 0.6); g.translate(-cx, -cy); g.beginPath(); g.arc(cx, cy, rad, 0, Math.PI * 2); g.fill(); g.restore();
   }
-}, { aniso: 1 });
+
+  // far hills, hazy blue-grey, two ridges
+  const ridge = (y0, amp, colour, phase) => {
+    g.fillStyle = colour; g.beginPath(); g.moveTo(0, h);
+    for (let x = 0; x <= w; x += 8) g.lineTo(x, y0 - amp * (Math.sin(x * 0.006 + phase) * 0.6 + Math.sin(x * 0.017 + phase * 2) * 0.3 + Math.sin(x * 0.041 + phase) * 0.1));
+    g.lineTo(w, h); g.fill();
+  };
+  ridge(h * 0.62, h * 0.07, '#b4c8d2', 1.2);
+  ridge(h * 0.67, h * 0.05, '#a3bcc0', 3.1);
+
+  // the buildings across the way, as before
+  g.fillStyle = '#8fa9bd'; g.fillRect(w * 0.8, 0, w * 0.14, h * 0.62);
+  g.fillStyle = 'rgba(255,255,255,.3)'; for (let y = 8; y < h * 0.6; y += 26) g.fillRect(w * 0.8, y, w * 0.14, 5);
+  g.fillStyle = '#a5563f'; g.fillRect(w * 0.66, h * 0.52, w * 0.3, h * 0.22);
+  g.fillStyle = 'rgba(255,240,220,.5)'; for (let x = w * 0.68; x < w * 0.94; x += 34) for (let y = h * 0.55; y < h * 0.7; y += 30) g.fillRect(x, y, 16, 14);
+
+  // lawn: a gradient, then blades of grass
+  const lawn = g.createLinearGradient(0, h * 0.7, 0, h);
+  lawn.addColorStop(0, '#a8cb78'); lawn.addColorStop(1, '#6f9a45');
+  g.fillStyle = lawn; g.fillRect(0, h * 0.7, w, h * 0.3);
+  for (let i = 0; i < 2600; i++) {
+    const x = r() * w, y = R(0.71, 1) * h, l = 4 + (y / h - 0.7) * 26;
+    g.strokeStyle = `hsl(${R(78, 108)},${R(35, 55)}%,${R(30, 52)}%)`; g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x + R(-3, 3), y - l); g.stroke();
+  }
+
+  // one conifer. depth 0 = near (dark, detailed), 1 = far (pale, hazy). Boughs droop from a trunk in tiers; light comes from the upper left.
+  const spruce = (x, base, H, depth) => {
+    const W = H * R(0.46, 0.56), hue = 138 - depth * 14, sat = 36 - depth * 16, lit = 17 + depth * 24;
+    const tone = (dl, ds = 0) => `hsl(${hue + R(-6, 6)},${Math.max(6, sat + ds + R(-5, 5))}%,${Math.min(80, lit + dl)}%)`;
+    // a soft contact shadow on the grass
+    g.fillStyle = `rgba(30,50,20,${0.22 - depth * 0.12})`; g.beginPath(); g.ellipse(x + W * 0.18, base + H * 0.012, W * 0.5, H * 0.03, 0, 0, Math.PI * 2); g.fill();
+    // trunk
+    g.strokeStyle = `hsl(24,28%,${16 + depth * 22}%)`; g.lineWidth = Math.max(2, H * 0.022); g.beginPath(); g.moveTo(x, base); g.lineTo(x, base - H * 0.3); g.stroke();
+    const tiers = Math.round(9 + H / 34), lean = R(-0.03, 0.03) * H;
+    // a dark, slightly ragged silhouette first, so the sky never shows between boughs
+    g.fillStyle = tone(-6); g.beginPath();
+    const edge = [];
+    for (let k = 0; k <= tiers; k++) { const t = k / tiers; edge.push([W * 0.5 * (0.03 + 0.97 * Math.pow(t, 0.9)) * R(0.86, 1.02), base - H * (0.97 - 0.85 * t)]); }
+    g.moveTo(x + lean, base - H); for (const [ew, ey] of edge) g.lineTo(x + ew + lean * (1 - (base - ey) / H), ey); for (let k = edge.length - 1; k >= 0; k--) g.lineTo(x - edge[k][0] + lean * (1 - (base - edge[k][1]) / H), edge[k][1]); g.closePath(); g.fill();
+    // boughs, top tier to bottom: dark undersides, then lighter tops and needle tufts
+    for (let k = 0; k < tiers; k++) {
+      const t = (k + 0.5) / tiers, y = base - H * (0.95 - 0.83 * t), half = W * 0.5 * (0.06 + 0.94 * Math.pow(t, 0.9)), n = Math.round(5 + half / 2.4);
+      const cx = x + lean * (1 - t);
+      for (let j = 0; j < n; j++) {
+        const side = j % 2 ? 1 : -1, len = half * R(0.5, 1.05), droop = len * R(0.16, 0.46), y0 = y + R(-0.02, 0.025) * H;
+        const lw = Math.max(1, H * 0.011 * (0.55 + 0.9 * t));
+        g.strokeStyle = tone(-2 + (side < 0 ? 3 : -1)); g.lineWidth = lw * 1.5; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(cx, y0); g.quadraticCurveTo(cx + side * len * 0.55, y0 - droop * 0.3, cx + side * len, y0 + droop); g.stroke();
+        g.strokeStyle = tone(5 + (side < 0 ? 7 : 1) + (1 - t) * 3); g.lineWidth = lw * 0.7;
+        g.beginPath(); g.moveTo(cx, y0 - lw * 0.4); g.quadraticCurveTo(cx + side * len * 0.55, y0 - droop * 0.3 - lw * 0.4, cx + side * len * 0.96, y0 + droop - lw * 0.4); g.stroke();
+        const tufts = depth > 0.6 ? 0 : 4;                       // far trees are too small to bother with needles
+        g.lineWidth = Math.max(0.8, lw * 0.5); g.strokeStyle = tone(2 + (side < 0 ? 6 : 0));
+        for (let m = 0; m < tufts; m++) {
+          const u = 0.3 + 0.7 * (m / tufts) + R(0, 0.08), px = cx + side * len * u, py = y0 + droop * u * u - droop * 0.1 * u;
+          g.beginPath(); g.moveTo(px, py); g.lineTo(px + R(-2, 2), py + R(H * 0.012, H * 0.03)); g.stroke();
+        }
+      }
+    }
+  };
+
+  // three depths: a hazy treeline, mid-ground conifers, and a few big ones close to the window
+  for (let x = -10; x < w * 0.66; x += R(14, 26)) spruce(x, h * R(0.7, 0.74), h * R(0.1, 0.17), 1);
+  for (let i = 0; i < 8; i++) spruce(R(0.0, 0.7) * w, h * R(0.78, 0.86), h * R(0.24, 0.38), R(0.35, 0.6));
+  const near = [[0.06, 0.98, 0.7], [0.22, 0.93, 0.5], [0.37, 1.0, 0.72], [0.53, 0.94, 0.52], [0.66, 0.97, 0.62]];
+  for (const [fx, fb, fh] of near) spruce(fx * w + R(-12, 12), h * fb, h * fh, R(0, 0.1));
+}, { aniso: 4 });
 
 // stand-in for one of my landscape prints on the collage wall, until a real painting takes the slot
 const landscapeTex = () => canvasTex(96, 72, (g, w, h) => {
