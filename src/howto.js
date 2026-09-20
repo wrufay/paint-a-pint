@@ -12,20 +12,30 @@ const seen = () => { try { return localStorage.getItem(KEY) === '1'; } catch { r
 const remember = () => { try { localStorage.setItem(KEY, '1'); } catch {} };
 
 let returnFocus = null;
-const isOpen = () => !modal.hidden;
+let seq = 0;   // bumped on every open and close, so a fade-out that finishes after a re-open cannot hide the new one
+const isOpen = () => !modal.hidden && !modal.classList.contains('closing');
+const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function open() {
   if (isOpen()) return;
+  seq++;
   returnFocus = document.activeElement;
+  modal.classList.remove('closing');
   modal.hidden = false;
   go.focus({ preventScroll: true });
 }
 
+// Closing fades it out first (CSS, .closing), then hides it. Users who ask for reduced motion get it hidden at once.
 function close() {
   if (!isOpen()) return;
-  modal.hidden = true;
   remember();
   if (returnFocus && returnFocus.focus) returnFocus.focus({ preventScroll: true });
+  const mine = ++seq;
+  const finish = () => { if (seq !== mine) return; modal.hidden = true; modal.classList.remove('closing'); };
+  if (reduceMotion()) { finish(); return; }
+  modal.classList.add('closing');
+  modal.addEventListener('animationend', (e) => { if (e.target === modal) finish(); }, { once: true });
+  setTimeout(finish, 450);   // in case animationend never arrives (a hidden tab, say)
 }
 
 go.addEventListener('click', close);

@@ -96,7 +96,12 @@
     @media (hover: none) { .kb { display: none; } }   /* touch: there is no keyboard to press, so the key hints go */
     @keyframes howto-in { from { opacity: 0; } to { opacity: 1; } }
     @keyframes howto-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-    @media (prefers-reduced-motion: reduce) { #howto, .howto-card { animation: none; } }
+    /* closing: the same two moves in reverse, then src/howto.js hides it. Clicks pass through while it fades. */
+    #howto.closing { animation: howto-out .22s ease-in forwards; pointer-events: none; }
+    #howto.closing .howto-card { animation: howto-sink .22s ease-in forwards; }
+    @keyframes howto-out { from { opacity: 1; } to { opacity: 0; } }
+    @keyframes howto-sink { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(10px); } }
+    @media (prefers-reduced-motion: reduce) { #howto, .howto-card, #howto.closing, #howto.closing .howto-card { animation: none; } }
     .help { position: absolute; top: 16px; right: 14px; width: 26px; height: 26px; padding: 0; line-height: 1; border: var(--border-btn); border-radius: 50%;
             background: #fff; color: var(--ink); font: inherit; font-size: var(--text-sm); font-weight: var(--weight-bold); cursor: pointer; }
     .help:hover { background: var(--butter); }
