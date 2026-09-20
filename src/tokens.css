@@ -1,0 +1,53 @@
+/*
+ * paint-a-pint design tokens. Spec + rationale live in docs/design/DESIGN.md.
+ * Nothing imports this file yet. The four colour names below (--cream, --pink,
+ * --green, --ink) and --mono match the inline :root blocks in index.html and
+ * lab.html on purpose, so adopting this file is a drop-in swap.
+ */
+
+:root {
+  /* ---- colour: PROVISIONAL, lifted from the existing pages; revisit in the colour pass ---- */
+  --cream: #fbf7ee;
+  --pink: #e58a8a;
+  --green: #5fa88c;
+  --ink: #4a3b34;
+
+  --paper: #f6efdd;       /* canvas / sheet surface (index.html) */
+  --backdrop: #1c1915;    /* room page background (index.html) */
+  --backdrop-lab: #2b2622;/* lab page background (lab.html) */
+  --muted-on-dark: #cdbfae;
+
+  /* ---- type: families ---- */
+  --font-display: "Young Serif", Georgia, "Times New Roman", serif;
+  --font-ui: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-tape: "Nunito", var(--font-ui);
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; /* lab / debug only */
+
+  /* ---- type: sizes ---- */
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 14px;
+  --text-lg: 18px;
+  --text-xl: 24px;
+  --text-display: 44px;
+
+  /* ---- type: weights (Young Serif only ships 400) ---- */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-bold: 700;
+
+  /* ---- type: tracking ---- */
+  --tracking-caps: 0.14em;  /* taped chips: MENU, PALETTE */
+  --tracking-btn: 0.04em;   /* pill buttons */
+
+  /* ---- shape ---- */
+  --radius-pill: 999px;
+  --radius-card: 10px;
+  --radius-chip: 3px;
+  --border-btn: 1.5px solid rgba(74, 59, 52, 0.35);
+
+  /* ---- taped-paper chip ---- */
+  --chip-bg: #fff8e8;
+  --chip-tilt: -2deg;
+  --tape-pink: rgba(229, 138, 138, 0.65);
+}
