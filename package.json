@@ -11,5 +11,8 @@
   "dependencies": {
     "three": "^0.186.0",
     "vite": "^8.3.0"
+  },
+  "devDependencies": {
+    "spectral.js": "^3.0.0"
   }
 }

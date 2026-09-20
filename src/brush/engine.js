@@ -9,8 +9,10 @@
 //     the last of it). As it goes the paint stiffens: open (blends, gets picked up) -> tacky (drags, breaks up under
 //     a brush) -> locked, when the wet layer freezes into film. Later paint covers film instead of mixing with it.
 //   • Wet-on-wet: a bristle dragged through open paint picks it up and mixes.
-//   • Colour mixes subtractively (geometric mean in linear RGB), so blue + yellow leans green.
+//   • Colour mixes as pigment (Kubelka-Munk over a 38-band spectrum), so blue + yellow leans green and white tints.
 //   • Everything is lit from paint height (normal map + a touch of gloss), so thick paint reads as thick.
+
+import { mixPigment } from './pigment.js';
 
 export const DEFAULTS = {
   size: 46,            // brush width in canvas px
@@ -79,18 +81,8 @@ function mulberry32(a) {
   };
 }
 
-// Subtractive-ish mix of linear RGB: geometric mean blended slightly with the linear mean
-// so mixes don't collapse to mud. t = weight of b.
-const EPS = 0.004;
-function mix3(out, a0, a1, a2, b0, b1, b2, t) {
-  const g0 = Math.exp(Math.log(a0 + EPS) * (1 - t) + Math.log(b0 + EPS) * t) - EPS;
-  const g1 = Math.exp(Math.log(a1 + EPS) * (1 - t) + Math.log(b1 + EPS) * t) - EPS;
-  const g2 = Math.exp(Math.log(a2 + EPS) * (1 - t) + Math.log(b2 + EPS) * t) - EPS;
-  const L = 0.25; // share of plain linear mixing
-  out[0] = g0 * (1 - L) + (a0 * (1 - t) + b0 * t) * L;
-  out[1] = g1 * (1 - L) + (a1 * (1 - t) + b1 * t) * L;
-  out[2] = g2 * (1 - L) + (a2 * (1 - t) + b2 * t) * L;
-}
+// Pigment mix of linear RGB (Kubelka-Munk over a 38-band spectrum, see pigment.js). t = weight of b.
+const mix3 = mixPigment;
 
 export class PaintEngine {
   constructor({ width = 1200, height = 900, seed = 7 } = {}) {
