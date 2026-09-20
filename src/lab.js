@@ -113,6 +113,12 @@ canvas.addEventListener('pointercancel', end);
 // ── buttons ─────────────────────────────────────────────────────────────────
 document.getElementById('undo').onclick = () => engine.restore();
 document.getElementById('clear').onclick = () => { engine.snapshot(); engine.clear(); };
+let wetOn = false;
+document.getElementById('wetview').onclick = (e) => {
+  wetOn = !wetOn; engine.setDebugWet(wetOn);
+  e.currentTarget.style.background = wetOn ? '#cfe3ff' : ''; // blue = still workable, orange = getting tacky, no tint = dry
+  document.getElementById('stat').dataset.hint = wetOn ? 'blue = open · orange = tacky · no tint = dry' : '';
+};
 document.getElementById('dry').onclick = () => { engine.snapshot(); engine.dryAll(); }; // as if left overnight
 document.getElementById('tuneBtn').onclick = () => document.getElementById('tune').classList.toggle('open');
 document.getElementById('save').onclick = () => {
@@ -139,7 +145,7 @@ function frame() {
   const r = engine.render();
   if (r) { ctx.putImageData(img, 0, 0, r.x, r.y, r.w, r.h); worst = Math.max(worst, performance.now() - t); }
   frames++;
-  if (t - t0 > 1000) { stat.textContent = `${frames} fps · worst paint ${worst.toFixed(1)}ms`; frames = 0; worst = 0; t0 = t; }
+  if (t - t0 > 1000) { stat.textContent = `${frames} fps · worst paint ${worst.toFixed(1)}ms` + (stat.dataset.hint ? ' · ' + stat.dataset.hint : ''); frames = 0; worst = 0; t0 = t; }
   requestAnimationFrame(frame);
 }
 engine.renderAll(); ctx.putImageData(img, 0, 0);

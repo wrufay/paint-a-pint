@@ -51,7 +51,7 @@ const F_OPEN = 0.3, F_LOCK = 0.12, F_FRESH = 0.4;
 const DAB = 0.08;                                               // thickness of one typical stroke (measured)
 // water one DAB must lose to go from fresh to F_OPEN, per unit of wetSeconds
 const E0 = DAB * (1 - F_FRESH) * (F_FRESH / (1 - F_FRESH) - F_OPEN / (1 - F_OPEN));
-const PUSH_MAX = 65536, pushIdx = new Int32Array(PUSH_MAX), pushS = new Float32Array(PUSH_MAX), pushW = new Float32Array(PUSH_MAX);
+const PUSH_MAX = 65536, pushIdx = new Int32Array(PUSH_MAX), pushS = new Float32Array(PUSH_MAX), pushW = new Float32Array(PUSH_MAX), pushC = new Float32Array(PUSH_MAX * 3);
 const TILE = 32;                                                // drying and shading work on tiles, only where paint is wet
 const smooth01 = (t) => { t = t < 0 ? 0 : t > 1 ? 1 : t; return t * t * (3 - 2 * t); };
 
@@ -91,6 +91,8 @@ export class PaintEngine {
     this.tileActive = new Uint8Array(this.TX * this.TY);   // has wet paint, so it needs drying
     this.tileDirty = new Uint8Array(this.TX * this.TY);    // needs re-shading
     this.tileProg = new Float32Array(this.TX * this.TY);   // mean dryness when last shaded
+    this.gesso = [srgbToLinear(0.93), srgbToLinear(0.9), srgbToLinear(0.83)];   // bare ground colour
+    this.debugWet = false;               // tint paint by how workable it is: blue open, orange tacky, none locked
     this.now = 0;                        // simulated seconds
     this._t = undefined; this._pend = 0;
     this.stroke = null;
@@ -143,7 +145,7 @@ export class PaintEngine {
 
   clear() {
     const n = this.W * this.H;
-    const g = [srgbToLinear(0.93), srgbToLinear(0.9), srgbToLinear(0.83)]; // warm gesso
+    const g = this.gesso; // warm gesso
     for (let i = 0; i < n; i++) { this.color[i * 3] = g[0]; this.color[i * 3 + 1] = g[1]; this.color[i * 3 + 2] = g[2]; }
     this.height.fill(0); this.water.fill(0); this.film.fill(0);
     this.tileActive.fill(0); this.tileProg.fill(0); this.tileDirty.fill(2); this.anyDirty = true;
@@ -278,12 +280,12 @@ export class PaintEngine {
             const fx = bx + sx * d, fy = by + sy * d, tx = Math.floor(fx), ty = Math.floor(fy), ax = fx - tx, ay = fy - ty;
             if (tx >= 0 && tx < W - 1 && ty >= 0 && ty < H - 1 && f > 0.002 && np + 4 <= PUSH_MAX) {
               // land it across the four pixels around the target, so ridges are smooth and not one rounded pixel
-              const j = ty * W + tx, ms = s0 * f, mw = w0 * f;
+              const j = ty * W + tx, ms = s0 * f, mw = w0 * f, ci = i * 3, c0 = color[ci], c1 = color[ci + 1], c2 = color[ci + 2];
               const w00 = (1 - ax) * (1 - ay), w10 = ax * (1 - ay), w01 = (1 - ax) * ay, w11 = ax * ay;
-              pushIdx[np] = j; pushS[np] = ms * w00; pushW[np] = mw * w00; np++;
-              pushIdx[np] = j + 1; pushS[np] = ms * w10; pushW[np] = mw * w10; np++;
-              pushIdx[np] = j + W; pushS[np] = ms * w01; pushW[np] = mw * w01; np++;
-              pushIdx[np] = j + W + 1; pushS[np] = ms * w11; pushW[np] = mw * w11; np++;
+              pushIdx[np] = j; pushS[np] = ms * w00; pushW[np] = mw * w00; pushC[np * 3] = c0; pushC[np * 3 + 1] = c1; pushC[np * 3 + 2] = c2; np++;
+              pushIdx[np] = j + 1; pushS[np] = ms * w10; pushW[np] = mw * w10; pushC[np * 3] = c0; pushC[np * 3 + 1] = c1; pushC[np * 3 + 2] = c2; np++;
+              pushIdx[np] = j + W; pushS[np] = ms * w01; pushW[np] = mw * w01; pushC[np * 3] = c0; pushC[np * 3 + 1] = c1; pushC[np * 3 + 2] = c2; np++;
+              pushIdx[np] = j + W + 1; pushS[np] = ms * w11; pushW[np] = mw * w11; pushC[np * 3] = c0; pushC[np * 3 + 1] = c1; pushC[np * 3 + 2] = c2; np++;
               s0 -= s0 * f; w0 -= w0 * f; tw = s0 + w0;
             }
           }
@@ -294,6 +296,10 @@ export class PaintEngine {
           const present = Math.min(1, tw * 8);
           if (wk > 0.02 && present > 0.05 && P.pickup > 0) {
             let t = Math.min(0.5, P.pickup * wk * present * amt * (1.4 - loadFrac));
+            // a pixel that still looks like bare canvas holds no pigment worth dragging: without this the bristles
+            // bleach themselves on thin, gesso-tinted paint and go on laying gesso-coloured ridges
+            const g = this.gesso, looks = Math.abs(color[c] - g[0]) + Math.abs(color[c + 1] - g[1]) + Math.abs(color[c + 2] - g[2]);
+            t *= Math.min(1, looks * 4);
             t /= t + (1 - t) * s.strength;   // a strong pigment on the bristle wins over what it drags through
             mix3(tmp, b.c0, b.c1, b.c2, color[c], color[c + 1], color[c + 2], t);
             b.c0 = tmp[0]; b.c1 = tmp[1]; b.c2 = tmp[2];
@@ -322,8 +328,11 @@ export class PaintEngine {
     }
     for (let k = 0; k < np; k++) {
       const j = pushIdx[k], room = Math.max(0, 1.6 - film[j] - height[j] - water[j]), m = pushS[k] + pushW[k];
-      const keep = m > room ? room / m : 1;
+      const keep = m > room ? room / m : 1, moved = m * keep, here = height[j] + water[j];
       height[j] += pushS[k] * keep; water[j] += pushW[k] * keep;
+      // the pushed paint brings its colour: it takes over a bare pixel, and only tints one that already holds paint
+      const t = moved / (moved + here + 0.004), q = j * 3;
+      color[q] += (pushC[k * 3] - color[q]) * t; color[q + 1] += (pushC[k * 3 + 1] - color[q + 1]) * t; color[q + 2] += (pushC[k * 3 + 2] - color[q + 2]) * t;
     }
     const pad = pushing ? 8 : 2;   // shoved paint lands a few pixels outside the bristles
     if (x1 >= x0) { this._markActive(x0 - pad, y0 - pad, x1 + 1 + pad, y1 + 1 + pad); this._markDirty(x0 - pad, y0 - pad, x1 + 1 + pad, y1 + 1 + pad); }
@@ -434,13 +443,18 @@ export class PaintEngine {
 
         const spec = Math.pow(Math.max(0, nx * hx + ny * hy + nz * hz), 36) * P.gloss * (0.25 + Math.min(1, p * 3)) * (1.5 - 0.5 * dry);
         const o = i * 4, c = i * 3;
-        rgba[o] = linearToSrgb(Math.min(1, color[c] * lit + spec)) * 255;
-        rgba[o + 1] = linearToSrgb(Math.min(1, color[c + 1] * lit + spec)) * 255;
-        rgba[o + 2] = linearToSrgb(Math.min(1, color[c + 2] * lit + spec)) * 255;
-        rgba[o + 3] = 255;
+        let R = linearToSrgb(Math.min(1, color[c] * lit + spec)) * 255, G = linearToSrgb(Math.min(1, color[c + 1] * lit + spec)) * 255, B = linearToSrgb(Math.min(1, color[c + 2] * lit + spec)) * 255;
+        if (this.debugWet && tw > 1e-5) {
+          const wk = smooth01((water[i] / tw - F_LOCK) / (F_OPEN - F_LOCK));
+          const a = wk >= 0.999 ? 0.55 : 0.6 * Math.min(1, wk * 4 + 0.15), r2 = wk >= 0.999 ? 40 : 255, g2 = wk >= 0.999 ? 110 : 140, b2 = wk >= 0.999 ? 255 : 0;
+          R += (r2 - R) * a; G += (g2 - G) * a; B += (b2 - B) * a;
+        }
+        rgba[o] = R; rgba[o + 1] = G; rgba[o + 2] = B; rgba[o + 3] = 255;
       }
     }
   }
+
+  setDebugWet(on) { this.debugWet = !!on; this.tileDirty.fill(2); this.anyDirty = true; }
 
   renderAll() {
     this.tileDirty.fill(2); this.anyDirty = true;
