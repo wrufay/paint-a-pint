@@ -142,7 +142,7 @@ export function initAcrylicUI(painter, { onBack, view }) {
   const syncShape = () => { for (const k in shapeBtns) shapeBtns[k].classList.toggle('sel', painter.engine.params.shape === k); };
   for (const k of ['flat', 'filbert', 'round']) {
     const b = document.createElement('button');
-    b.className = 'btn'; b.textContent = k; b.style.cssText = 'padding-left:2px;padding-right:2px;font-size:11px;letter-spacing:0;';
+    b.className = 'btn'; b.textContent = k; b.style.cssText = 'padding-left:2px;padding-right:2px;font-size:var(--text-xs);letter-spacing:0;';
     b.title = { flat: 'flat brush: a row of bristles', filbert: 'filbert: an oval tip, width follows pressure', round: 'round brush: click for a dab' }[k];
     b.onclick = () => { painter.engine.params.shape = k; saveParams(painter.engine.params); syncShape(); };
     shapeBtns[k] = b; shapes.appendChild(b);
@@ -162,7 +162,7 @@ export function initAcrylicUI(painter, { onBack, view }) {
   mk('save png', () => painter.savePng(), true);
   const wetHint = document.createElement('p');
   wetHint.textContent = 'blue = still workable · orange = getting tacky · no tint = dry';
-  wetHint.style.cssText = 'display:none;margin:8px 0 0;font-size:11px;color:var(--ink-soft);text-align:center;';
+  wetHint.style.cssText = 'display:none;margin:8px 0 0;font-size:var(--text-xs);color:var(--ink-soft);text-align:center;';
   // easel or desk: put the canvas down flat for a bird's-eye view, and stand it back up
   let viewBtn = null;
   if (view) {

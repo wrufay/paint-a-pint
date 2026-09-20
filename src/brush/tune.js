@@ -59,9 +59,9 @@ const SIMPLE = [
 export function buildTunePanel(params, defaults, { onChange = () => {} } = {}) {
   const el = document.createElement('div');
   el.className = 'note';
-  el.style.cssText = 'display:none;position:absolute;left:26px;top:50%;transform:translateY(-50%);width:264px;max-height:82vh;overflow:auto;padding:20px 16px 14px;font-size:12px;';
+  el.style.cssText = 'display:none;position:absolute;left:26px;top:50%;transform:translateY(-50%);width:264px;max-height:82vh;overflow:auto;padding:20px 16px 14px;font-size:var(--text-sm);';
   const h = document.createElement('h2');
-  h.textContent = 'SETTINGS'; h.style.cssText = 'margin:0 0 12px;color:var(--ultramarine);font-size:20px;letter-spacing:.08em;';
+  h.textContent = 'SETTINGS'; h.style.cssText = 'margin:0 0 12px;color:var(--ultramarine);font-size:var(--text-lg);letter-spacing:.08em;';
   el.appendChild(h);
 
   const change = () => { saveParams(params); onChange(); };
@@ -75,7 +75,7 @@ export function buildTunePanel(params, defaults, { onChange = () => {} } = {}) {
     const l = document.createElement('label'); l.textContent = label;
     top.appendChild(l); if (out) top.appendChild(out);
     r.appendChild(top); r.appendChild(input);
-    if (hint) { const s = document.createElement('div'); s.style.cssText = 'display:flex;justify-content:space-between;color:var(--ink-soft);font-size:11px;'; s.innerHTML = `<span>${hint[0]}</span><span>${hint[1]}</span>`; r.appendChild(s); }
+    if (hint) { const s = document.createElement('div'); s.style.cssText = 'display:flex;justify-content:space-between;color:var(--ink-soft);font-size:var(--text-xs);'; s.innerHTML = `<span>${hint[0]}</span><span>${hint[1]}</span>`; r.appendChild(s); }
     return r;
   };
   const range = (min, max, step) => { const i = document.createElement('input'); i.type = 'range'; i.min = min; i.max = max; i.step = step; i.style.cssText = 'width:100%;accent-color:var(--green);'; return i; };

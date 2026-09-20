@@ -22,18 +22,18 @@
     .sw { width: 38px; height: 38px; border-radius: 50%; border: 3px solid var(--cream); box-shadow: 0 0 0 1.5px rgba(74,59,52,.35), inset 0 -3px 5px rgba(0,0,0,.25), inset 0 3px 5px rgba(255,255,255,.35); padding: 0; }
     .sw.on { box-shadow: 0 0 0 3px var(--pink), inset 0 -3px 5px rgba(0,0,0,.25), inset 0 3px 5px rgba(255,255,255,.35); transform: translateY(-4px); }
 
-    #bar { top: max(16px, env(safe-area-inset-top)); left: 16px; padding: 10px 12px 8px; display: flex; gap: 8px; align-items: center; font-size: 12px; }
-    button.b { font: inherit; font-size: 12px; letter-spacing: .05em; color: var(--ink); background: #fff; border: 1.5px solid rgba(74,59,52,.35); border-radius: 999px; padding: 8px 14px; }
+    #bar { top: max(16px, env(safe-area-inset-top)); left: 16px; padding: 10px 12px 8px; display: flex; gap: 8px; align-items: center; font-size: var(--text-sm); }
+    button.b { font: inherit; font-size: var(--text-sm); letter-spacing: var(--tracking-btn); color: var(--ink); background: #fff; border: 1.5px solid rgba(74,59,52,.35); border-radius: 999px; padding: 8px 14px; }
     button.b:active { background: var(--butter); }
-    #tune { top: max(16px, env(safe-area-inset-top)); right: 16px; width: min(320px, calc(100vw - 32px)); max-height: calc(100vh - 130px); overflow: auto; padding: 16px 16px 12px; display: none; font-size: 12px; }
+    #tune { top: max(16px, env(safe-area-inset-top)); right: 16px; width: min(320px, calc(100vw - 32px)); max-height: calc(100vh - 130px); overflow: auto; padding: 16px 16px 12px; display: none; font-size: var(--text-sm); }
     #tune.open { display: block; }
     .row { display: grid; grid-template-columns: 96px 1fr 44px; gap: 8px; align-items: center; margin: 0 0 9px; }
     .row label { letter-spacing: .03em; }
     .row output { text-align: right; color: var(--ink-soft); }
     input[type=range] { width: 100%; accent-color: var(--green); }
     #tune .btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-    #out { width: 100%; height: 90px; margin-top: 10px; font: 11px var(--mono); display: none; }
-    #stat { position: fixed; left: 16px; bottom: 16px; font-size: 11px; color: var(--muted-on-dark); opacity: .8; pointer-events: none; }
+    #out { width: 100%; height: 90px; margin-top: 10px; font: var(--text-xs) var(--mono); display: none; }
+    #stat { position: fixed; left: 16px; bottom: 16px; font-size: var(--text-xs); color: var(--muted-on-dark); opacity: .8; pointer-events: none; }
   </style>
 </head>
 <body>

@@ -23,11 +23,11 @@
       clip-path: polygon(0 10%, 4% 0, 8% 12%, 12% 0, 92% 0, 96% 12%, 100% 0, 100% 90%, 96% 100%, 92% 88%, 88% 100%, 8% 100%, 4% 88%, 0 100%);
     }
 
-    #title { position: fixed; top: 22px; left: 22px; padding: 12px 18px 10px; font-weight: 700; letter-spacing: .14em; font-size: 13px; transition: opacity .4s; }
-    #title small { display: block; font-weight: 400; letter-spacing: .04em; color: var(--ink-soft); margin-top: 3px; font-size: 11px; }
+    #title { position: fixed; top: 22px; left: 22px; padding: 12px 18px 10px; font-weight: var(--weight-bold); letter-spacing: var(--tracking-caps); font-size: var(--text-sm); transition: opacity .4s; }
+    #title small { display: block; font-weight: var(--weight-regular); letter-spacing: .04em; color: var(--ink-soft); margin-top: 3px; font-size: var(--text-xs); }
     #hint {
       position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); padding: 9px 16px;
-      background: rgba(251,247,238,.92); border-radius: 999px; font-size: 12px; letter-spacing: .06em;
+      background: rgba(251,247,238,.92); border-radius: 999px; font-size: var(--text-sm); letter-spacing: .06em;
       box-shadow: 0 4px 14px rgba(0,0,0,.3); transition: opacity .4s; pointer-events: none;
     }
     body.painting #title, body.painting #hint, body.travelling #title, body.travelling #hint { opacity: 0; }
@@ -46,25 +46,25 @@
       position: absolute; right: 26px; top: 50%; transform: translateY(-50%); width: 212px; padding: 22px 18px 16px;
       border: 5px dashed var(--pink); background: var(--cream);
     }
-    #card h2 { margin: 0 0 12px; color: var(--ultramarine); font-size: 20px; letter-spacing: .08em; }
+    #card h2 { margin: 0 0 12px; color: var(--ultramarine); font-size: var(--text-lg); letter-spacing: .08em; }
     #swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
     .sw { width: 100%; aspect-ratio: 1; border-radius: 50%; border: 2px solid rgba(0,0,0,.18); cursor: pointer; padding: 0; transition: transform .12s; }
     .sw:hover { transform: scale(1.08); }
     .sw.sel { outline: 3px solid var(--green); outline-offset: 2px; }
-    .row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 12px; }
+    .row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: var(--text-sm); }
     .row label { min-width: 34px; }
     input[type=range] { flex: 1; accent-color: var(--green); }
     .btn {
-      font: inherit; font-size: 12px; letter-spacing: .04em; color: var(--ink); background: #fff; cursor: pointer;
+      font: inherit; font-size: var(--text-sm); letter-spacing: var(--tracking-btn); color: var(--ink); background: #fff; cursor: pointer;
       border: 2px solid var(--ink); border-radius: 6px; padding: 7px 10px; width: 100%; margin-top: 8px;
     }
     .btn:hover { background: var(--butter); }
     .btn.sel { background: var(--ink); color: var(--cream); }
-    .btn.primary { background: var(--terracotta); border-color: var(--terracotta); color: var(--cream); font-weight: 700; }
+    .btn.primary { background: var(--terracotta); border-color: var(--terracotta); color: var(--cream); font-weight: var(--weight-bold); }
     .btn.primary:hover { filter: brightness(1.06); }
     .tools { display: flex; gap: 8px; }
     .tools .btn { margin-top: 0; }
-    #esc { font-size: 10.5px; color: var(--ink-soft); margin: 10px 0 0; text-align: center; }
+    #esc { font-size: var(--text-xs); color: var(--ink-soft); margin: 10px 0 0; text-align: center; }
 
     #cursor {
       position: fixed; left: 0; top: 0; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%;
