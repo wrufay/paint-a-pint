@@ -1,7 +1,8 @@
 // The room's painter, backed by the acrylic engine. It has the same surface as the old gouache Painter in paint.js
 // (down / move / up / clear / composite, .canvas, .dirty), so main.js only swaps the class.
-import { PaintEngine, hexToLinear } from './brush/engine.js';
+import { PaintEngine, DEFAULTS, hexToLinear } from './brush/engine.js';
 import { PAINTS, PALETTES } from './brush/paints.js';
+import { buildTunePanel, loadParams } from './brush/tune.js';
 
 export const BOX = PALETTES['my box'].map((id) => PAINTS.find((p) => p.id === id));
 
@@ -12,6 +13,7 @@ export class AcrylicPainter {
     this.ctx = canvas.getContext('2d');
     grainCanvas.style.display = 'none'; // the engine paints its own canvas weave
     this.engine = new PaintEngine({ width: w, height: h });
+    loadParams(this.engine.params);   // whatever was tuned in the lab or in the settings panel
     this.img = new ImageData(this.engine.rgba, w, h);
     // 3D easel maps: unlit colour + normals, so the room's lights shade the paint. They lag the canvas and are only
     // copied out (syncMaps) when the room is actually on screen.
@@ -33,7 +35,6 @@ export class AcrylicPainter {
     this.dirty = false;
     this.drawing = false;
     this.last = null;
-    this.engine.params.size = 46;
   }
 
   get size() { return this.engine.params.size; }
@@ -43,6 +44,14 @@ export class AcrylicPainter {
   clear() { this.engine.snapshot(); this.engine.clear(); this.dirty = false; this._blit(true); }
   undo() { if (this.engine.restore()) this._blit(true); }
   dryNow() { this.engine.snapshot(); this.engine.dryAll(); this._blit(true); }
+  setWetnessView(on) { this.engine.setDebugWet(on); this._blit(true); }   // blue = still workable, orange = tacky, none = dry
+  savePng() {
+    this.composite().toBlob((blob) => {
+      if (!blob) return;
+      const a = document.createElement('a'); a.download = 'paint-a-pint.png'; a.href = URL.createObjectURL(blob); a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    }, 'image/png');
+  }
 
   _pressure(x, y, pressure, isPen) {
     if (isPen && pressure > 0) return pressure;
@@ -125,6 +134,23 @@ export function initAcrylicUI(painter, { onBack }) {
   document.getElementById('dry').onclick = () => painter.dryNow();
   document.getElementById('clear').onclick = () => painter.clear();
   document.getElementById('back').onclick = onBack;
+
+  // settings / wetness / save: built here (not in index.html) so the card layout stays the design session's call
+  const extra = document.createElement('div');
+  extra.className = 'tools'; extra.style.cssText = 'margin-top:8px;flex-wrap:wrap;';   // two rows: settings + wetness, then save png
+  const mk = (label, onclick, wide) => { const b = document.createElement('button'); b.className = 'btn'; b.textContent = label; b.onclick = onclick; b.style.flex = wide ? '1 1 100%' : '1 1 calc(50% - 4px)'; extra.appendChild(b); return b; };
+  const panel = buildTunePanel(painter.engine.params, DEFAULTS, { onChange: () => { size.value = painter.size; updateCursor(); } });
+  document.getElementById('paint').appendChild(panel);
+  const settingsBtn = mk('settings', () => { const on = panel.style.display === 'none'; panel.style.display = on ? 'block' : 'none'; settingsBtn.classList.toggle('sel', on); if (on) panel.refresh(); });
+  let wet = false;
+  const wetBtn = mk('wetness', () => { wet = !wet; painter.setWetnessView(wet); wetBtn.classList.toggle('sel', wet); wetHint.style.display = wet ? 'block' : 'none'; });
+  mk('save png', () => painter.savePng(), true);
+  const wetHint = document.createElement('p');
+  wetHint.textContent = 'blue = still workable · orange = getting tacky · no tint = dry';
+  wetHint.style.cssText = 'display:none;margin:8px 0 0;font-size:10.5px;opacity:.7;text-align:center;';
+  const back = document.getElementById('back');
+  back.parentNode.insertBefore(extra, back); back.parentNode.insertBefore(wetHint, back);
+
   const esc = document.getElementById('esc'); if (esc) esc.textContent = 'esc: back to the room, painting stays on the easel';
   sync();
 

@@ -87,7 +87,7 @@ function homePose() {
   return { pos: HOME.pos.clone(), quat: c.quaternion.clone(), fov: HOME.fov };
 }
 
-// camera square-on to the canvas, nudged so the paper sits left of centre and the note card has room on the right
+// camera square-on to the canvas, centred, with the note card to the right on wide screens
 function paintPose() {
   world.easel.updateMatrixWorld(true);
   const q = new THREE.Quaternion(); world.canvasFace.getWorldQuaternion(q);
@@ -95,10 +95,10 @@ function paintPose() {
   const n = new THREE.Vector3(0, 0, 1).applyQuaternion(q), right = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
   const fov = 30, half = Math.tan(THREE.MathUtils.degToRad(fov / 2)), aspect = camera.aspect;
   const wide = aspect > 1.25;
-  const distH = world.CH / 0.58 / (2 * half);
-  const distW = world.CW / (wide ? 0.6 : 0.86) / (2 * half * aspect);
+  const distH = world.CH / 0.68 / (2 * half);
+  const distW = world.CW / (wide ? 0.68 : 0.86) / (2 * half * aspect);
   const dist = Math.max(distH, distW);
-  const shift = wide ? 0.115 * 2 * half * dist * aspect : 0;
+  const shift = 0; // centred on the page; on wide screens the card sits to the right of it
   const lift = wide ? 0 : -0.16 * 2 * half * dist; // narrow screens: canvas sits high, card below
   const up = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
   const pos = c.clone().addScaledVector(n, dist).addScaledVector(right, shift).addScaledVector(up, lift);

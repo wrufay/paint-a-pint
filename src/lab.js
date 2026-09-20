@@ -1,6 +1,7 @@
 // Brush lab: just the acrylic engine, a palette, and live sliders. Tune on the iPad, copy the numbers back.
 import { PaintEngine, DEFAULTS, hexToLinear } from './brush/engine.js';
 import { PAINTS, PALETTES } from './brush/paints.js';
+import { SLIDERS, fmt, loadParams, saveParams } from './brush/tune.js';
 
 const W = 1200, H = 900;
 const canvas = document.getElementById('paper');
@@ -10,39 +11,10 @@ const engine = new PaintEngine({ width: W, height: H });
 const img = new ImageData(engine.rgba, W, H);
 
 // ── params (persisted so a refresh doesn't lose your tuning) ────────────────
-const KEY = 'paint-a-pint:lab-params:v1';
-try { Object.assign(engine.params, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch {}
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify(engine.params)); } catch {} };
+loadParams(engine.params);
+const save = () => saveParams(engine.params);
 
-const SLIDERS = [
-  ['size', 'brush size', 8, 140, 1],
-  ['bristles', 'bristles', 8, 90, 1],
-  ['load', 'paint load', 0.2, 2, 0.05],
-  ['consumption', 'runs dry', 0.00005, 0.003, 0.00005],
-  ['dry', 'dry brush', 0, 1.5, 0.05],
-  ['opacity', 'opacity', 0.3, 1, 0.02],
-  ['pickup', 'wet pickup', 0, 0.6, 0.01],
-  ['wetSeconds', 'open time (s)', 5, 300, 5],
-  ['waterMix', 'paint water', 0.1, 0.85, 0.01],
-  ['thickDry', 'thick dries slow', 0, 2, 0.05],
-  ['skin', 'skin', 0, 4, 0.1],
-  ['tack', 'tack drag', 0, 1.5, 0.05],
-  ['dryDarken', 'dry darkening', 0, 0.3, 0.01],
-  ['timeScale', 'time warp', 1, 120, 1],
-  ['push', 'ridges', 0, 0.8, 0.02],
-  ['heightGain', 'thickness', 0.01, 0.2, 0.005],
-  ['relief', 'relief', 0, 14, 0.25],
-  ['weave', 'canvas weave', 0, 0.4, 0.01],
-  ['gloss', 'gloss', 0, 0.8, 0.02],
-  ['lightAngle', 'light angle', 0, 360, 5],
-  ['follow', 'follow stroke', 0, 1, 0.05],
-  ['fixedAngle', 'brush angle', -90, 90, 5],
-  ['smooth', 'smoothing', 0, 0.9, 0.05],
-  ['hueJitter', 'colour drift', 0, 0.3, 0.01],
-  ['bristleTint', 'bristle tint', 0, 0.2, 0.01],
-];
 const sliders = document.getElementById('sliders');
-const fmt = (v) => (Math.abs(v) < 0.01 && v !== 0 ? v.toFixed(5) : Number.isInteger(v) ? String(v) : String(+v.toFixed(3)));
 const inputs = {};
 for (const [k, label, min, max, step] of SLIDERS) {
   const row = document.createElement('div'); row.className = 'row';
