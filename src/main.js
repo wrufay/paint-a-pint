@@ -10,6 +10,7 @@ import { addPaintProps, TABLE } from './props.js';
 import { addTray3D } from './tray3d.js';
 import { ChairPhysics } from './chair.js';
 import { typeIn } from './typing.js';
+import { startAutosave, saveWall, loadWall } from './persist.js';
 
 const BG = 0x1c1915;
 const app = document.getElementById('app');
@@ -168,7 +169,7 @@ function confirmDelete(slot) {
   const del = document.createElement('button'); del.className = 'btn primary'; del.textContent = 'delete'; del.style.marginTop = '0';
   del.onclick = () => {
     closeConfirm();
-    leaveView(() => { setHoverFrame(null); world.unhang(slot); slot.popT = performance.now(); poke(4); shadowWake = 3; });   // fly back, then the frame empties with a little pop
+    leaveView(() => { setHoverFrame(null); world.unhang(slot); saveWall(world.frames); slot.popT = performance.now(); poke(4); shadowWake = 3; });   // fly back, then the frame empties with a little pop
   };
   row.append(keep, del);
   box.append(h, thumb, p, row);
@@ -332,6 +333,7 @@ function leavePaint(hang = true) {
       slot.popT = performance.now();
       painter.clear();
       uploadPaint();
+      saveWall(world.frames);
     }
   }, wasDown ? { from: easelFlat, to: easelUp, legs: true } : undefined);   // lift the easel back up if it was lying flat
 }
@@ -663,6 +665,16 @@ function frame(now) {
 addEventListener('resize', resize);
 resize();
 requestAnimationFrame(frame);
+
+// ── autosave: the painting on the easel, the palette and the paintings on the wall come back after a reload ────────────────────
+// (see persist.js). The canvas and palette are restored before the first save, so a fresh tab never overwrites what was kept.
+loadWall((canvas, i) => { world.hang(canvas, i); poke(4); shadowWake = 3; });
+startAutosave([
+  { key: 'canvas', engine: painter.engine, extra: () => ({ dirty: painter.dirty }),
+    restored: (x) => { painter.dirty = !!x.dirty; painter._blit(true); poke(4); shadowWake = 3; } },
+  { key: 'tray', engine: world.tray.tray.engine, extra: () => ({ slot: world.tray.tray.slot }),
+    restored: (x) => { world.tray.tray.slot = x.slot | 0; world.tray.upload(); poke(4); } },
+]);
 
 // tiny hook for automated screenshots / debugging
 window.__paint = { confirmDelete, viewPainting, leaveView, showOnEasel, showLive, get onEasel() { return onEasel; }, orbit, chairPhys, enterPaint, leavePaint, painter, world, camera, renderer, uploadPaint, ui, get mode() { return mode; }, get deskMode() { return deskMode; } };

@@ -108,6 +108,7 @@ export class PaintEngine {
     this.now = 0;                        // simulated seconds
     this._t = undefined; this._pend = 0;
     this.stroke = null;
+    this.rev = 0;                        // counts changes a person made (a stroke, clear, dry now, undo), so a saver can tell when to save
     this._makeGround(seed);
     this.clear();
   }
@@ -131,7 +132,34 @@ export class PaintEngine {
   }
 
   // "Dry now": everything wet becomes film, as if left for a day.
-  dryAll() { this._saveTiles(0, 0, this.W, this.H); this.advance(86400); this.tileDirty.fill(2); this.anyDirty = true; }
+  dryAll() { this._saveTiles(0, 0, this.W, this.H); this.advance(86400); this.tileDirty.fill(2); this.anyDirty = true; this.rev++; }
+
+  // ── saving ────────────────────────────────────────────────────────────────
+  // exportState() copies out everything that is the painting: the colour, the wet layer and the dried film, plus the simulated clock.
+  // (The weave is regenerated from the seed, and the undo history is not kept.) importState() is its inverse, and returns false if the
+  // state is for a canvas of another size. Drying is not re-run here: the caller decides how long the paint sat (advance()).
+  exportState() {
+    const n = this.W * this.H, f = new Float32Array(n * 6);
+    f.set(this.color, 0); f.set(this.height, n * 3); f.set(this.water, n * 4); f.set(this.film, n * 5);
+    return { W: this.W, H: this.H, now: this.now, data: f };
+  }
+
+  importState(s) {
+    const n = this.W * this.H;
+    if (!s || s.W !== this.W || s.H !== this.H || !s.data || s.data.length !== n * 6) return false;
+    const f = s.data;
+    this.color.set(f.subarray(0, n * 3)); this.height.set(f.subarray(n * 3, n * 4)); this.water.set(f.subarray(n * 4, n * 5)); this.film.set(f.subarray(n * 5, n * 6));
+    this.owner.fill(0); this.now = s.now || 0; this.stroke = null;
+    this._undo = []; this._cur = null; this._undoBytes = 0;
+    const { W, H, TX, TY, height, water } = this;
+    this.tileActive.fill(0); this.tileProg.fill(0);
+    for (let ty = 0; ty < TY; ty++) for (let tx = 0; tx < TX; tx++) {          // a tile with any wet paint in it needs drying
+      const xb = Math.min(W, tx * TILE + TILE), yb = Math.min(H, ty * TILE + TILE);
+      scan: for (let y = ty * TILE; y < yb; y++) for (let x = tx * TILE, i = y * W + x; x < xb; x++, i++) if (height[i] > 0 || water[i] > 0) { this.tileActive[ty * TX + tx] = 1; break scan; }
+    }
+    this.tileDirty.fill(2); this.anyDirty = true; this.rev++;
+    return true;
+  }
 
   _makeGround(seed) {
     const { W, H } = this, r = mulberry32(seed * 31 + 5);
@@ -161,7 +189,7 @@ export class PaintEngine {
     const g = this.gesso; // warm gesso
     for (let i = 0; i < n; i++) { this.color[i * 3] = g[0]; this.color[i * 3 + 1] = g[1]; this.color[i * 3 + 2] = g[2]; }
     this.height.fill(0); this.water.fill(0); this.film.fill(0);
-    this.tileActive.fill(0); this.tileProg.fill(0); this.tileDirty.fill(2); this.anyDirty = true;
+    this.tileActive.fill(0); this.tileProg.fill(0); this.tileDirty.fill(2); this.anyDirty = true; this.rev++;
   }
 
   // ── undo: copy-on-write by tile ───────────────────────────────────────────
@@ -217,6 +245,7 @@ export class PaintEngine {
         this.tileActive[t.t] = t.active;
         this._markDirty(t.xa - 1, t.ya - 1, t.xa + t.w + 1, t.ya + t.h + 1);
       }
+      this.rev++;
       return true;
     }
     return false;
@@ -318,7 +347,7 @@ export class PaintEngine {
     s.px = tx; s.py = ty; s.sx = x; s.sy = y; s.pressure = pressure; s.moved += dist;
   }
 
-  endStroke() { this.stroke = null; }
+  endStroke() { if (this.stroke) this.rev++; this.stroke = null; }
 
   // (ux, uy) is the unit direction of travel; (0, 0) means no travel yet, so nothing is pushed.
   _deposit(cx, cy, pressure, axis, ux, uy) {

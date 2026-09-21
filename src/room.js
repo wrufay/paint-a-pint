@@ -356,8 +356,8 @@ export function buildRoom(scene) {
     }
   }));
   let nextSlot = 0;
-  function hang(canvas) {
-    const slot = frames.find((f) => !f.filled) || frames[nextSlot++ % frames.length];
+  function hang(canvas, index) {   // (index: hang it in that frame, as when the wall is put back after a reload)
+    const slot = frames[index] || frames.find((f) => !f.filled) || frames[nextSlot++ % frames.length];
     const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
     // cover-crop the painting into the frame's aspect
