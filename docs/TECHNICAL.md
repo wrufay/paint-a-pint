@@ -77,12 +77,16 @@ Scattering nine tubes at angles among a canvas, a palette, water jars and a drag
 The room renders in a real browser, so behaviour could not be checked by unit tests alone.
 **Solution.** Node scripts exercise the engine (drying, mixing, undo, brush shapes, the palette, tube placement) and write images; headless Chrome drives the real room through enter, paint, mix, drag, undo and leave, and asserts on engine state as well as screenshots. An early mistake is worth recording: the browser harness forced software rendering, which turned each check into minutes. Running on the real GPU brought a full round trip to about six seconds and made the whole test loop practical.
 
+### 14. Autosave, with paint that keeps drying while you are away
+The painting is about 30 MB of floats and the tab can close at any moment.
+**Solution.** The engine exports its colour, wet layer and dried film, and a change counter says when a stroke, clear, dry-now or undo has made a save worth doing. A saver checks the counter every two seconds (and when the tab is hidden), gzips the state through the browser's own stream API off the main thread, and writes it to IndexedDB along with the time. On load the paint is dried for as long as the tab was closed, so a wet painting reopened the next day is dry. A fully painted canvas stores as about 20 MB, saves in under a second and restores in about 0.3 s; the palette and the hung pictures (stored as PNGs with their frame) are kept the same way. Nothing leaves the device, and a browser that refuses storage simply forgets.
+
 ## Limits, stated plainly
 
 - Drying times, paint thickness, tinting strengths and some opacities are educated estimates tuned by eye against real paintings, not measurements.
 - Each pixel stores one visible colour, so the paint-versus-ground separation in challenge 3 is a patch rather than a full layer model.
 - Performance numbers come from Node and desktop Chrome. Tablet performance has not been measured.
-- The painting is held in memory only. Settings and the card position persist in the browser; the painting and hung pictures do not (autosave is not built).
+- Autosave keeps the painting, the palette and the hung pictures in this browser only (IndexedDB), so they do not follow you to another browser or device, and the browser may clear them (Safari does after about a week without a visit). Undo history is not kept across a reload.
 
 ## Credits
 
