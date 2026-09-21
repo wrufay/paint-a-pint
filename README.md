@@ -1,6 +1,6 @@
 # paint-a-pint 🎨⊹°
 
-Welcome to [Fay's](https://faywu.ca/) solo build for _[Hack the North '26](https://hackthenorth2026.devpost.com/)_ (๑ᵔ⤙ᵔ๑) Semi-Finalist
+_[Hack the North '26](https://hackthenorth2026.devpost.com/)_ Semi-Finalist by [Fay](https://faywu.ca/) (๑ᵔ⤙ᵔ๑)
 
 ![paint-a-pint cover: the title in red paint on crumpled paper, with a paint bucket of brushes, a dictionary card for "pint", and two taped-on photos of a desk and a small acrylic landscape](docs/assets/cover.png)
 
