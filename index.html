@@ -462,9 +462,26 @@
           bottom: 14px;
           width: min(92vw, 420px);
           padding-top: 18px;
+          /* on a phone the card is taller than it is wide, and taller than short screens have room for: cap it and let
+             it scroll internally, so the canvas is never fully hidden behind it (see docs/design/DESIGN.md, "Paint card"). */
+          max-height: min(58vh, calc(100vh - 96px));
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+          overscroll-behavior: contain;
         }
         #swatches {
           grid-template-columns: repeat(6, 1fr);
+        }
+      }
+      /* a short phone in portrait: the card's own rows (tray copy, secondary toolbar) are the ones with room to give */
+      @media (max-aspect-ratio: 5/4) and (max-height: 700px) {
+        #card {
+          max-height: min(64vh, calc(100vh - 72px));
+          padding: 16px 16px 12px;
+        }
+        #card .row,
+        #card p {
+          margin-bottom: 8px;
         }
       }
     </style>
