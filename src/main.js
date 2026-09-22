@@ -694,7 +694,19 @@ function frame(now) {
     if (shadowWake > 0) { renderer.shadowMap.needsUpdate = true; shadowWake--; }
     composer.render();
     wake--;
+    hideLoader();   // the room has actually drawn a frame now, so the plain-HTML loading screen can fade for the real one
   }
+}
+
+// the loading screen (plain HTML, shown from the first paint) fades out once, the first time a real frame has been drawn
+let loaderGone = false;
+function hideLoader() {
+  if (loaderGone) return;
+  loaderGone = true;
+  const l = document.getElementById('loader');
+  if (!l) return;
+  l.classList.add('hide');
+  l.addEventListener('transitionend', () => l.remove(), { once: true });
 }
 
 addEventListener('resize', resize);
