@@ -11,7 +11,7 @@ import { addTray3D } from './tray3d.js';
 import { ChairPhysics } from './chair.js';
 import { typeIn } from './typing.js';
 import { startAutosave, saveWall, loadWall } from './persist.js';
-import { inject as injectAnalytics } from '@vercel/analytics';
+import { inject as injectAnalytics, track } from '@vercel/analytics';
 
 injectAnalytics();   // aggregate, anonymised page visits (Vercel Analytics); a no-op off Vercel
 
@@ -310,6 +310,7 @@ function warnSmallScreen(onProceed) {
 function enterPaint() {
   if (mode !== 'room') return;
   if (isSmallScreen() && !smallOk()) { warnSmallScreen(enterPaint); return; }
+  track('painting_started');   // counts visits to the easel, not unique people; pairs with painting_hung for a rough finish rate
   showLive();   // you paint on the live canvas, so a hung painting on the easel goes back on the wall (it never left it)
   mode = 'travelling';
   hover(false);
@@ -371,6 +372,7 @@ function leavePaint(hang = true) {
       painter.clear();
       uploadPaint();
       saveWall(world.frames);
+      track('painting_hung');   // a count only: no image, no colours, nothing about what was painted
     }
   }, wasDown ? { from: easelFlat, to: easelUp, legs: true } : undefined);   // lift the easel back up if it was lying flat
 }
