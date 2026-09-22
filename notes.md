@@ -17,4 +17,8 @@ personally - wanted to make it a community thing. someone said like shared pinte
 - be able to change the thickness of the paint, also smooth it out because IRL u have those options (bascially making it more realistic!)
 
 
+buggy
+- fix the flow and make it really clear - 
+
+
 

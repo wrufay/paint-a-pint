@@ -20,6 +20,8 @@ As a second year computer science student navigating early career, life undoubtl
 
 I aimed to solve this through making the act of painting digital, without having to worry about costs, material, and negative respiratory impacts that real acrylic painting can entail.
 
+Your work saved locally, return anytime to see your past paintings or continue on a piece.
+
 
 
 ## Built with
