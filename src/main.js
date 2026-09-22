@@ -11,6 +11,9 @@ import { addTray3D } from './tray3d.js';
 import { ChairPhysics } from './chair.js';
 import { typeIn } from './typing.js';
 import { startAutosave, saveWall, loadWall } from './persist.js';
+import { inject as injectAnalytics } from '@vercel/analytics';
+
+injectAnalytics();   // aggregate, anonymised page visits (Vercel Analytics); a no-op off Vercel
 
 const BG = 0x1c1915;
 const app = document.getElementById('app');
