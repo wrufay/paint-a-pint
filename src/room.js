@@ -161,6 +161,31 @@ const landscapeTex = () => canvasTex(96, 72, (g, w, h) => {
   else { g.fillStyle = 'rgba(240,210,80,.85)'; for (let i = 0; i < 26; i++) g.fillRect(rnd(0, w), rnd(h * 0.7, h), 2, 2); }
 });
 
+// a sunset ship print, the kind of poster print you'd pin up: a big warm sun over a small sailing-ship silhouette on aged paper
+const shipPosterTex = () => canvasTex(300, 400, (g, w, h) => {
+  g.fillStyle = '#e9e2cd'; g.fillRect(0, 0, w, h);   // aged paper base
+  for (let i = 0; i < 1400; i++) { g.fillStyle = `rgba(120,105,80,${rnd(0.02, 0.06)})`; g.fillRect(rnd(0, w), rnd(0, h), rnd(1, 2), rnd(1, 2)); }
+  const sky = g.createLinearGradient(0, 0, 0, h * 0.56);
+  sky.addColorStop(0, '#aebac6'); sky.addColorStop(1, '#e9e2cd');
+  g.fillStyle = sky; g.fillRect(0, 0, w, h * 0.56);
+  // the sun
+  const cx = w * 0.5, cy = h * 0.22, R = w * 0.26;
+  const sun = g.createRadialGradient(cx, cy - R * 0.15, 0, cx, cy, R);
+  sun.addColorStop(0, '#e5643f'); sun.addColorStop(0.7, '#d84630'); sun.addColorStop(1, '#b52c22');
+  g.fillStyle = sun; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
+  // waterline
+  g.fillStyle = '#c9c0a4'; g.fillRect(0, h * 0.56, w, h * 0.44);
+  // a small sailing-ship silhouette on the water
+  const sx = w * 0.5, sy = h * 0.58;
+  g.fillStyle = '#3a332a';
+  g.beginPath();   // hull
+  g.moveTo(sx - w * 0.16, sy); g.quadraticCurveTo(sx, sy + h * 0.05, sx + w * 0.16, sy); g.lineTo(sx + w * 0.12, sy - h * 0.02); g.lineTo(sx - w * 0.12, sy - h * 0.02); g.closePath(); g.fill();
+  g.fillRect(sx - 0.5, sy - h * 0.22, 1, h * 0.2);   // mast
+  g.beginPath(); g.moveTo(sx, sy - h * 0.21); g.lineTo(sx + w * 0.075, sy - h * 0.1); g.lineTo(sx, sy - h * 0.08); g.closePath(); g.fill();   // sail
+  g.beginPath(); g.moveTo(sx, sy - h * 0.22); g.lineTo(sx + w * 0.035, sy - h * 0.2); g.lineTo(sx, sy - h * 0.18); g.closePath(); g.fill();   // a small flag
+  g.fillStyle = 'rgba(58,51,42,.55)'; g.beginPath(); g.ellipse(sx, sy + h * 0.015, w * 0.17, h * 0.008, 0, 0, Math.PI * 2); g.fill();   // reflection
+}, { aniso: 4 });
+
 const paperTex = () => canvasTex(128, 176, (g, w, h) => {
   g.fillStyle = '#f7f3ea'; g.fillRect(0, 0, w, h);
   g.strokeStyle = 'rgba(70,60,50,.55)'; g.lineWidth = 1;
@@ -378,6 +403,11 @@ export function buildRoom(scene) {
     m.map = slot.placeholder; m.color.set(0xffffff); m.emissive.setRGB(0, 0, 0); m.needsUpdate = true;
     slot.filled = false; slot.canvas = null; slot.easelTex = null;
   }
+
+  // a sunset ship poster, pinned to the wall right of the window and the string lights, above the bed's headboard
+  const POST_X = 3.05, POST_Y = 3.05, POST_W = 0.85, POST_H = 1.1;
+  box(room, POST_W + 0.09, POST_H + 0.09, 0.025, M.white, POST_X, POST_Y, -3.83, { r: 0.006 });
+  plane(room, POST_W, POST_H, new THREE.MeshStandardMaterial({ map: shipPosterTex(), roughness: 0.92 }), POST_X, POST_Y, -3.815);
 
   // sticky note + handwritten sheets on the plain left wall
   plane(room, 0.5, 0.5, new THREE.MeshStandardMaterial({ color: 0xf1ec7a, roughness: 0.9 }), -3.84, 3.35, -2.9, { ry: Math.PI / 2 });
