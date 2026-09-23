@@ -161,29 +161,29 @@ const landscapeTex = () => canvasTex(96, 72, (g, w, h) => {
   else { g.fillStyle = 'rgba(240,210,80,.85)'; for (let i = 0; i < 26; i++) g.fillRect(rnd(0, w), rnd(h * 0.7, h), 2, 2); }
 });
 
-// a sunset ship print, the kind of poster print you'd pin up: a big warm sun over a small sailing-ship silhouette on aged paper
+// a sunset ship print, the kind of poster print you'd pin up: a soft, faded sun over a plain little ship on aged paper. Kept calm and
+// muted on purpose - a hazy print, not a bold one.
 const shipPosterTex = () => canvasTex(300, 400, (g, w, h) => {
   g.fillStyle = '#e9e2cd'; g.fillRect(0, 0, w, h);   // aged paper base
   for (let i = 0; i < 1400; i++) { g.fillStyle = `rgba(120,105,80,${rnd(0.02, 0.06)})`; g.fillRect(rnd(0, w), rnd(0, h), rnd(1, 2), rnd(1, 2)); }
   const sky = g.createLinearGradient(0, 0, 0, h * 0.56);
-  sky.addColorStop(0, '#aebac6'); sky.addColorStop(1, '#e9e2cd');
+  sky.addColorStop(0, '#b7bfc4'); sky.addColorStop(1, '#e9e2cd');
   g.fillStyle = sky; g.fillRect(0, 0, w, h * 0.56);
-  // the sun
-  const cx = w * 0.5, cy = h * 0.22, R = w * 0.26;
-  const sun = g.createRadialGradient(cx, cy - R * 0.15, 0, cx, cy, R);
-  sun.addColorStop(0, '#e5643f'); sun.addColorStop(0.7, '#d84630'); sun.addColorStop(1, '#b52c22');
+  // the sun: soft and faded, its edge lost in the haze rather than a hard disc
+  const cx = w * 0.5, cy = h * 0.24, R = w * 0.3;
+  const sun = g.createRadialGradient(cx, cy, 0, cx, cy, R);
+  sun.addColorStop(0, 'rgba(216,132,104,.62)'); sun.addColorStop(0.55, 'rgba(203,124,102,.4)'); sun.addColorStop(1, 'rgba(203,124,102,0)');
   g.fillStyle = sun; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
   // waterline
   g.fillStyle = '#c9c0a4'; g.fillRect(0, h * 0.56, w, h * 0.44);
-  // a small sailing-ship silhouette on the water
+  // a plain little ship on the water: a rounded hull, one mast, one sail - no flag or ornament
   const sx = w * 0.5, sy = h * 0.58;
-  g.fillStyle = '#3a332a';
+  g.fillStyle = '#514a3f';
   g.beginPath();   // hull
-  g.moveTo(sx - w * 0.16, sy); g.quadraticCurveTo(sx, sy + h * 0.05, sx + w * 0.16, sy); g.lineTo(sx + w * 0.12, sy - h * 0.02); g.lineTo(sx - w * 0.12, sy - h * 0.02); g.closePath(); g.fill();
-  g.fillRect(sx - 0.5, sy - h * 0.22, 1, h * 0.2);   // mast
-  g.beginPath(); g.moveTo(sx, sy - h * 0.21); g.lineTo(sx + w * 0.075, sy - h * 0.1); g.lineTo(sx, sy - h * 0.08); g.closePath(); g.fill();   // sail
-  g.beginPath(); g.moveTo(sx, sy - h * 0.22); g.lineTo(sx + w * 0.035, sy - h * 0.2); g.lineTo(sx, sy - h * 0.18); g.closePath(); g.fill();   // a small flag
-  g.fillStyle = 'rgba(58,51,42,.55)'; g.beginPath(); g.ellipse(sx, sy + h * 0.015, w * 0.17, h * 0.008, 0, 0, Math.PI * 2); g.fill();   // reflection
+  g.moveTo(sx - w * 0.15, sy); g.quadraticCurveTo(sx, sy + h * 0.045, sx + w * 0.15, sy); g.lineTo(sx + w * 0.11, sy - h * 0.018); g.lineTo(sx - w * 0.11, sy - h * 0.018); g.closePath(); g.fill();
+  g.fillRect(sx - 0.5, sy - h * 0.2, 1, h * 0.18);   // mast
+  g.beginPath(); g.moveTo(sx, sy - h * 0.19); g.lineTo(sx + w * 0.07, sy - h * 0.09); g.lineTo(sx, sy - h * 0.07); g.closePath(); g.fill();   // one plain sail
+  g.fillStyle = 'rgba(81,74,63,.4)'; g.beginPath(); g.ellipse(sx, sy + h * 0.014, w * 0.15, h * 0.007, 0, 0, Math.PI * 2); g.fill();   // reflection
 }, { aniso: 4 });
 
 const paperTex = () => canvasTex(128, 176, (g, w, h) => {
