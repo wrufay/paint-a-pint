@@ -275,41 +275,36 @@ function travel(to, done, easel) {
 }
 
 // ── "this is a squeeze on your screen" warning: room and painting on a phone-sized screen is cramped, so say so once and let
-// people choose. Built from the delete-confirm dialog's own look (cream, dashed pink border, a dimmed backdrop). Once someone
-// says "try anyway" it does not ask again this tab (sessionStorage), win or lose.
-const SMALL_OK = 'paint-a-pint:small-ok';
+// people choose. Built from the delete-confirm dialog's own look (cream, dashed pink border, a dimmed backdrop). There is no
+// "try anyway": the card and the desk camera don't fit a phone screen well enough to paint on, so painting stays closed here.
+// Looking around the room is unaffected.
 const isSmallScreen = () => innerWidth < 600 || innerHeight < 560;
-const smallOk = () => { try { return sessionStorage.getItem(SMALL_OK) === '1'; } catch { return false; } };
 let smallEl = null;
 function closeSmall() { if (smallEl) smallEl.style.display = 'none'; }
-function warnSmallScreen(onProceed) {
+function warnSmallScreen() {
   if (!smallEl) {
     smallEl = document.createElement('div');
     smallEl.style.cssText = 'position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(28,25,21,.55);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);';
-    smallEl.addEventListener('pointerdown', (e) => { if (e.target === smallEl) closeSmall(); });   // a click on the dim area means "maybe later"
+    smallEl.addEventListener('pointerdown', (e) => { if (e.target === smallEl) closeSmall(); });
     document.body.appendChild(smallEl);
   }
   const box = document.createElement('div');
-  box.className = 'note'; box.setAttribute('role', 'alertdialog'); box.setAttribute('aria-label', 'This screen is a tight fit');
+  box.className = 'note'; box.setAttribute('role', 'alertdialog'); box.setAttribute('aria-label', 'Painting needs a bigger screen');
   box.style.cssText = 'width:min(320px,90vw);padding:26px 22px 18px;border:5px dashed var(--pink);background:var(--cream);color:var(--ink);';
   const h = document.createElement('h2');
-  h.textContent = 'A BIT SNUG HERE'; h.style.cssText = 'margin:0 0 12px;color:var(--ultramarine);font-size:var(--text-lg);letter-spacing:.08em;';
+  h.textContent = 'NEEDS A BIGGER SCREEN'; h.style.cssText = 'margin:0 0 12px;color:var(--ultramarine);font-size:var(--text-lg);letter-spacing:.08em;';
   const p = document.createElement('p');
-  p.textContent = "paint-a-pint is built for a bigger screen — a tablet or laptop leaves room for the whole desk. It'll be cozy here, but you're welcome to squeeze in.";
+  p.textContent = "paint-a-pint is built for a tablet or laptop — there's no room for the desk here. Feel free to look around, just not to paint on this screen.";
   p.style.cssText = 'margin:0 0 14px;font-size:var(--text-sm);line-height:1.5;color:var(--ink-soft);';
-  const row = document.createElement('div'); row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;';
-  const later = document.createElement('button'); later.className = 'btn'; later.textContent = 'maybe later'; later.style.marginTop = '0'; later.onclick = closeSmall;
-  const go = document.createElement('button'); go.className = 'btn primary'; go.textContent = 'try anyway'; go.style.marginTop = '0';
-  go.onclick = () => { try { sessionStorage.setItem(SMALL_OK, '1'); } catch {} closeSmall(); onProceed(); };
-  row.append(later, go);
-  box.append(h, p, row);
+  const ok = document.createElement('button'); ok.className = 'btn primary'; ok.textContent = 'got it'; ok.style.marginTop = '0'; ok.onclick = closeSmall;
+  box.append(h, p, ok);
   smallEl.replaceChildren(box); smallEl.style.display = 'flex';
-  later.focus();
+  ok.focus();
 }
 
 function enterPaint() {
   if (mode !== 'room') return;
-  if (isSmallScreen() && !smallOk()) { warnSmallScreen(enterPaint); return; }
+  if (isSmallScreen()) { warnSmallScreen(); return; }
   track('painting_started');   // counts visits to the easel, not unique people; pairs with painting_hung for a rough finish rate
   showLive();   // you paint on the live canvas, so a hung painting on the easel goes back on the wall (it never left it)
   mode = 'travelling';
