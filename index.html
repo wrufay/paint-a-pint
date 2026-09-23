@@ -55,65 +55,22 @@
         opacity: 0;
         pointer-events: none;
       }
-      .loader-mark {
-        font-family: var(--font-display);
-        font-weight: var(--weight-regular);
-        font-size: clamp(20px, 5vw, 28px);
-        color: var(--cream);
-        letter-spacing: 0.02em;
-      }
-      .loader-mark span {
-        display: inline-block;
-        transform-origin: 65% 85%;
-        animation: loader-tip 1.7s ease-in-out infinite;
-      }
-      .loader-dots {
-        display: flex;
-        gap: 9px;
-      }
-      .loader-dots i {
-        width: 9px;
-        height: 9px;
+      .loader-spin {
+        width: 34px;
+        height: 34px;
+        border: 3px solid rgba(251, 247, 238, 0.18);
+        border-top-color: var(--terracotta);
         border-radius: 50%;
-        display: block;
-        animation: loader-bounce 1s ease-in-out infinite;
+        animation: loader-spin 0.85s linear infinite;
       }
-      .loader-dots i:nth-child(1) {
-        background: var(--terracotta);
-      }
-      .loader-dots i:nth-child(2) {
-        background: var(--ultramarine);
-        animation-delay: 0.15s;
-      }
-      .loader-dots i:nth-child(3) {
-        background: var(--green);
-        animation-delay: 0.3s;
-      }
-      @keyframes loader-tip {
-        0%,
-        100% {
-          transform: rotate(0deg);
-        }
-        50% {
-          transform: rotate(-18deg);
-        }
-      }
-      @keyframes loader-bounce {
-        0%,
-        80%,
-        100% {
-          transform: translateY(0);
-          opacity: 0.55;
-        }
-        40% {
-          transform: translateY(-8px);
-          opacity: 1;
+      @keyframes loader-spin {
+        to {
+          transform: rotate(360deg);
         }
       }
       @media (prefers-reduced-motion: reduce) {
-        .loader-mark span,
-        .loader-dots i {
-          animation: none;
+        .loader-spin {
+          animation-duration: 2.4s;
         }
       }
 
@@ -568,8 +525,7 @@
   </head>
   <body>
     <div id="loader" aria-hidden="true">
-      <div class="loader-mark">paint-a-pint <span>🪣</span></div>
-      <div class="loader-dots"><i></i><i></i><i></i></div>
+      <div class="loader-spin"></div>
     </div>
     <div id="app"></div>
 
