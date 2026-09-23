@@ -55,22 +55,41 @@
         opacity: 0;
         pointer-events: none;
       }
+      /* the old-school 12-tick "activity indicator" wheel: each tick is a rotated full-size layer with a small bar at its top,
+         fading in turn so the wheel reads as spinning without anything actually rotating frame to frame. */
       .loader-spin {
-        width: 34px;
-        height: 34px;
-        border: 3px solid rgba(251, 247, 238, 0.18);
-        border-top-color: var(--terracotta);
-        border-radius: 50%;
-        animation: loader-spin 0.85s linear infinite;
+        position: relative;
+        width: 38px;
+        height: 38px;
       }
-      @keyframes loader-spin {
-        to {
-          transform: rotate(360deg);
+      .loader-spin i {
+        position: absolute;
+        inset: 0;
+        transform: rotate(calc(var(--i) * 30deg));
+      }
+      .loader-spin i::before {
+        content: "";
+        display: block;
+        width: 3px;
+        height: 30%;
+        margin: 0 auto;
+        background: var(--cream);
+        border-radius: 2px;
+        opacity: 0.15;
+        animation: loader-fade 1.2s linear infinite;
+        animation-delay: calc(var(--i) * -0.1s);
+      }
+      @keyframes loader-fade {
+        0% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0.15;
         }
       }
       @media (prefers-reduced-motion: reduce) {
-        .loader-spin {
-          animation-duration: 2.4s;
+        .loader-spin i::before {
+          animation-duration: 3s;
         }
       }
 
@@ -525,7 +544,10 @@
   </head>
   <body>
     <div id="loader" aria-hidden="true">
-      <div class="loader-spin"></div>
+      <div class="loader-spin">
+        <i style="--i: 0"></i><i style="--i: 1"></i><i style="--i: 2"></i><i style="--i: 3"></i><i style="--i: 4"></i><i style="--i: 5"></i>
+        <i style="--i: 6"></i><i style="--i: 7"></i><i style="--i: 8"></i><i style="--i: 9"></i><i style="--i: 10"></i><i style="--i: 11"></i>
+      </div>
     </div>
     <div id="app"></div>
 
