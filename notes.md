@@ -18,7 +18,15 @@ personally - wanted to make it a community thing. someone said like shared pinte
 
 
 buggy
-- fix the flow and make it really clear - 
+- fix the flow and make it really clear what to click, etc
+
+think through:
+- what would happen when the wall runs out of spots to put paintings?
+lol.
+
+- also i wanna add my own one piece poster onto the wall lol
+- also need to add like my own text to everything in free time, not ai text.
+- kinda nice design system tho maybe this could be an example of design system and stuff heheheheh anyays. larp? nah no larp move on </3
 
 
 
